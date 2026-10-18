@@ -61,6 +61,7 @@ dependencies {
     compileOnly(libs.compose.foundation)
     compileOnly(libs.compose.material3)
     compileOnly(libs.androidx.core.ktx)
+    compileOnly(libs.compose.material.icons)
 
     // 库本体：QmDeve/AndroidLiquidGlassView（com.qmdeve.liquidglass:core:1.1.0）
     implementation(libs.glass.qmdeve)

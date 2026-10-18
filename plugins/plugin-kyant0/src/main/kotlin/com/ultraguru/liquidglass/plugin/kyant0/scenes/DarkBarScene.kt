@@ -1,5 +1,7 @@
 package com.ultraguru.liquidglass.plugin.kyant0.scenes
 
+import com.ultraguru.liquidglass.plugin.kyant0.GlassSurfaceTint
+
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState

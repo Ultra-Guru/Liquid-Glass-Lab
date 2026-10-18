@@ -29,11 +29,11 @@ import kotlin.math.sin
  * ──────────────────────────────────────────────────────────────────────── */
 
 /** dp → px（浮点）。 */
-internal fun Context.dpf(dp: Float): Float =
-    TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, resources.displayMetrics)
+internal fun Context.dpf(dp: Number): Float =
+    TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp.toFloat(), resources.displayMetrics)
 
-/** dp → px（取整）。 */
-internal fun Context.dpi(dp: Float): Int = dpf(dp).toInt()
+/** dp → px（取整；Number 放宽：Int/Float 字面量都可直传）。 */
+internal fun Context.dpi(dp: Number): Int = dpf(dp).toInt()
 
 /** FrameLayout 的 MATCH_PARENT 布局参数（每次新实例）。 */
 internal fun matchLP(): FrameLayout.LayoutParams = FrameLayout.LayoutParams(
@@ -45,12 +45,12 @@ internal fun matchLP(): FrameLayout.LayoutParams = FrameLayout.LayoutParams(
 internal fun Context.text(
     content: String,
     sizeSp: Float,
-    color: Int = Color.WHITE,
+    color: Long = Color.WHITE.toLong(),
     bold: Boolean = false
 ): TextView = TextView(this).apply {
     text = content
     textSize = sizeSp
-    setTextColor(color)
+    setTextColor(color.toInt())
     gravity = Gravity.CENTER
     if (bold) typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
 }
@@ -213,8 +213,8 @@ internal class IconView(context: Context, val glyph: Glyph) : View(context) {
     private val path = Path()
     private val rect = RectF()
 
-    fun setIconColor(color: Int) {
-        paint.color = color
+    fun setIconColor(color: Long) {
+        paint.color = color.toInt()
         fillPaint.color = color
         invalidate()
     }

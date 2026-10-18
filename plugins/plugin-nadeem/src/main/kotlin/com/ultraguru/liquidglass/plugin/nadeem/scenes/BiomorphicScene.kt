@@ -89,7 +89,7 @@ internal fun BiomorphicScene() {
                 contentAlignment = Alignment.Center
             ) {
                 val cells = listOf(
-                    CellSpec(0, 150, 0f, 0f, 5, 0.18f, 0f),
+                    CellSpec(0, 150, 0f, 0, 5, 0.18f, 0f),
                     CellSpec(1, 92, 40f, 170, 6, 0.24f, 1.1f),
                     CellSpec(2, 74, 150f, 150, 4, 0.30f, 2.3f),
                     CellSpec(3, 104, 240f, 185, 7, 0.16f, 3.6f),

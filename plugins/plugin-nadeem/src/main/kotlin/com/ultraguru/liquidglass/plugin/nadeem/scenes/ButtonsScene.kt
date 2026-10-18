@@ -102,9 +102,9 @@ internal fun ButtonsScene() {
 
             // ── 次要行：自定义按压形变按钮（Modifier.liquidGlass） ──
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                PressGlass(state, "次要") {}
-                PressGlass(state, "危险") {}
-                PressGlass(state, "强调") {}
+                PressGlass(state = state, label = "次要", onClick = {})
+                PressGlass(state = state, label = "危险", onClick = {})
+                PressGlass(state = state, label = "强调", onClick = {})
             }
             Spacer(Modifier.height(26.dp))
 

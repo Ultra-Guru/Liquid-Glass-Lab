@@ -80,7 +80,7 @@ fun LiquidScene() {
                         onDragStart = { start ->
                             val target = Offset(start.x - boxSizePx / 2, start.y - boxSizePx / 2)
                             if (!initialized) {
-                                position.snapTo(target)
+                                scope.launch { position.snapTo(target) }
                                 initialized = true
                             }
                             dragging = true

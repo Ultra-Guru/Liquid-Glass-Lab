@@ -37,6 +37,7 @@ import com.skydoves.cloudy.ExperimentalLiquidGlassMotion
 import com.skydoves.cloudy.cloudy
 import com.skydoves.cloudy.rememberGyroLightSource
 import kotlin.math.cos
+import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /**
@@ -84,7 +85,7 @@ fun BiomorphicScene() {
             ) {
                 // 细胞群：围绕中心呼吸
                 val cells = listOf(
-                    CellSpec(sizeDp = 150, angleDeg = 0f, distDp = 0f, lobes = 5, wobble = 0.18f, phase = 0f),
+                    CellSpec(sizeDp = 150, angleDeg = 0f, distDp = 0, lobes = 5, wobble = 0.18f, phase = 0f),
                     CellSpec(sizeDp = 92, angleDeg = 40f, distDp = 170, lobes = 6, wobble = 0.24f, phase = 1.1f),
                     CellSpec(sizeDp = 74, angleDeg = 150f, distDp = 150, lobes = 4, wobble = 0.30f, phase = 2.3f),
                     CellSpec(sizeDp = 104, angleDeg = 240f, distDp = 185, lobes = 7, wobble = 0.16f, phase = 3.6f),
@@ -95,15 +96,15 @@ fun BiomorphicScene() {
                     val wob = sin(breath * 2f * Math.PI.toFloat() + cell.phase)
                     val scale = 1f + 0.10f * wob
                     val shapePhase = breath * 2f + cell.phase
-                    val dist = cell.distDp * (1f + 0.06f * wob)
+                    val distDpFloat = cell.distDp * (1f + 0.06f * wob)
 
                     Box(
                         Modifier
                             .align(Alignment.Center)
                             .offset {
                                 IntOffset(
-                                    x = (cos(Math.toRadians(cell.angleDeg.toDouble())) * dist.value).toInt(),
-                                    y = (sin(Math.toRadians(cell.angleDeg.toDouble())) * dist.value).toInt()
+                                    x = (cos(Math.toRadians(cell.angleDeg.toDouble())) * distDpFloat).roundToInt(),
+                                    y = (sin(Math.toRadians(cell.angleDeg.toDouble())) * distDpFloat).roundToInt()
                                 )
                             }
                             .size(cell.sizeDp.dp)

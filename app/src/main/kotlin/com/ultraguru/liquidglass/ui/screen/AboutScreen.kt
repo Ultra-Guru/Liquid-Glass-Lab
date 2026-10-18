@@ -150,7 +150,7 @@ fun AboutScreen(onBack: () -> Unit) {
                                         readyApk = apk
                                         updateState = UpdateCenter.AppState.ReadyToInstall(
                                             apk, UpdateCenter.fetchAppManifest(settings.mirrorBase),
-                                            viaPatch = apk.name.contains("patch").not() && apk.length > 0
+                                            viaPatch = true
                                         )
                                         UpdateCenter.launchApkInstaller(context, apk)
                                     }.onFailure {

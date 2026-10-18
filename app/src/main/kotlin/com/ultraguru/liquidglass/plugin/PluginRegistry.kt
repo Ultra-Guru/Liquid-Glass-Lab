@@ -297,8 +297,9 @@ object PluginRegistry {
     fun isSignatureTrusted(apk: File): Boolean = runCatching {
         val pm = appContext.packageManager
         val pluginSigs = pm.getPackageArchiveInfo(apk.absolutePath, PackageManager.GET_SIGNATURES)
-            ?.signatures ?: return@runCatching false
-        val hostSigs = pm.getPackageInfo(appContext.packageName, PackageManager.GET_SIGNATURES).signatures
+            ?.signatures?.takeIf { it.isNotEmpty() } ?: return@runCatching false
+        val hostSigs = pm.getPackageInfo(appContext.packageName, PackageManager.GET_SIGNATURES)
+            .signatures ?: return@runCatching false
         if (pluginSigs.isEmpty() || hostSigs.isEmpty()) return@runCatching false
         val md = MessageDigest.getInstance("SHA-256")
         pluginSigs.map { md.digest(it.toByteArray()).joinToString("") { b -> "%02x".format(b) } }

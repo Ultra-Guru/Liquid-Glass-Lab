@@ -17,6 +17,10 @@ import androidx.compose.ui.unit.dp
 import com.ultraguru.liquidglass.plugin.api.GlassPlugin
 import com.ultraguru.liquidglass.plugin.api.PluginMeta
 import com.ultraguru.liquidglass.plugin.api.SceneIds
+import com.ultraguru.liquidglass.plugin.kyant0.scenes.BiomorphicScene
+import com.ultraguru.liquidglass.plugin.kyant0.scenes.ButtonsScene
+import com.ultraguru.liquidglass.plugin.kyant0.scenes.DarkBarScene
+import com.ultraguru.liquidglass.plugin.kyant0.scenes.LiquidScene
 import com.ultraguru.liquidglass.plugin.api.SceneMeta
 
 /**

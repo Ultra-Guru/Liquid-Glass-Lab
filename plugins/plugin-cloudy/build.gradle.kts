@@ -61,6 +61,7 @@ dependencies {
     compileOnly(libs.compose.foundation)
     compileOnly(libs.compose.material3)
     compileOnly(libs.androidx.core.ktx)
+    compileOnly(libs.compose.material.icons)
 
     // 库本体：skydoves/Cloudy（com.github.skydoves:cloudy:1.0.0-alpha01）
     implementation(libs.glass.cloudy)

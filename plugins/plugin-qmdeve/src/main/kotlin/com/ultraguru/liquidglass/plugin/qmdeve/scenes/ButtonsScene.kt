@@ -211,7 +211,7 @@ internal object ButtonsScene {
         val thumb = View(context).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(0xE6FFFFFF)
+                setColor(0xE6FFFFFF.toInt())
             }
         }
         holder.addView(

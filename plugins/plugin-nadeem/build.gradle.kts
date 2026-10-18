@@ -61,6 +61,7 @@ dependencies {
     compileOnly(libs.compose.foundation)
     compileOnly(libs.compose.material3)
     compileOnly(libs.androidx.core.ktx)
+    compileOnly(libs.compose.material.icons)
 
     // 库本体：NadeemIqbal/liquid-glass（io.github.nadeemiqbal:liquid-glass:0.2.3）
     implementation(libs.glass.nadeem)

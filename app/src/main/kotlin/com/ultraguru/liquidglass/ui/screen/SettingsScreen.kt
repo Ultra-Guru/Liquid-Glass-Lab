@@ -110,7 +110,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                     title = "动态取色",
                     subtitle = "Material You（Android 12+ 壁纸取色）",
                     checked = settings.dynamicColor,
-                    onChange = { app.settings.update { it.copy(dynamicColor = it) } }
+                    onChange = { v -> app.settings.update { it.copy(dynamicColor = v) } }
                 )
             }
         }
@@ -122,7 +122,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                     title = "启动时静默检查更新",
                     subtitle = "仅在发现新版本时于列表页提示",
                     checked = settings.silentUpdateCheck,
-                    onChange = { app.settings.update { it.copy(silentUpdateCheck = it) } }
+                    onChange = { v -> app.settings.update { it.copy(silentUpdateCheck = v) } }
                 )
                 Spacer(Modifier.height(8.dp))
                 Row(
@@ -248,7 +248,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                     title = "插件签名校验",
                     subtitle = "严格模式：插件 APK 签名须与宿主同源（自编译包关闭）",
                     checked = settings.verifyPluginSignature,
-                    onChange = { app.settings.update { it.copy(verifyPluginSignature = it) } }
+                    onChange = { v -> app.settings.update { it.copy(verifyPluginSignature = v) } }
                 )
             }
         }

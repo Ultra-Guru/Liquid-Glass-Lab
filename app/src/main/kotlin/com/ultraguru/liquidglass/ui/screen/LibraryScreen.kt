@@ -99,7 +99,7 @@ fun LibraryScreen(
 
     fun startInstall() {
         scope.launch {
-            val settings = GlassLabSettings()
+            val settings = currentSettings()
             val err = UpdateCenter.updatePlugin(
                 context = context,
                 pluginId = entry.id,
@@ -404,10 +404,10 @@ fun LibraryScreen(
 
 private fun hostVersionCode(): Int =
     runCatching {
-        val ctx = GlassLabApp.get()
+        val ctx = com.ultraguru.liquidglass.GlassLabApp.get()
         @Suppress("DEPRECATION")
         ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionCode
     }.getOrDefault(1)
 
-private fun GlassLabSettings(): com.ultraguru.liquidglass.data.SettingsStore.Settings =
+private fun currentSettings(): com.ultraguru.liquidglass.data.SettingsStore.Settings =
     com.ultraguru.liquidglass.GlassLabApp.get().settings.state.value

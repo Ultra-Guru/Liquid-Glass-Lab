@@ -20,7 +20,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -28,12 +31,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.compose.ui.platform.LocalContext
-import androidx.savedstate.SavedStateRegistry
+import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.compose.LocalSavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.setViewTreeLifecycleOwner
-import android.view.View
 import com.ultraguru.liquidglass.plugin.PluginRegistry
 
 /**
@@ -107,8 +109,8 @@ fun SceneHostScreen(
                 AndroidView(
                     factory = { ctx ->
                         sceneView.apply {
-                            View.setViewTreeLifecycleOwner(lifecycleOwner)
-                            setViewTreeSavedStateRegistryOwner(savedStateOwner as SavedStateRegistry)
+                            setViewTreeLifecycleOwner(lifecycleOwner)
+                            setViewTreeSavedStateRegistryOwner(savedStateOwner)
                         }
                     },
                     modifier = Modifier.fillMaxSize()

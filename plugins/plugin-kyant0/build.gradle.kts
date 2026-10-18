@@ -63,7 +63,9 @@ dependencies {
     compileOnly(libs.compose.foundation)
     compileOnly(libs.compose.material3)
     compileOnly(libs.androidx.core.ktx)
+    compileOnly(libs.compose.material.icons)
 
-    // 唯一的「库本体」：kyant0 AndroidLiquidGlass（io.github.kyant0:backdrop）
-    implementation(libs.glass.backdrop)
+    // 库本体：kyant0 AndroidLiquidGlass 1.0.6 + Kyant0/Shapes 1.2.0 —— vendored 源码内嵌
+    //（上游 shapes 的 Maven Android 变体为空发布，二进制消费不可用；同 AGA 项目的 vendor 决策）
+    // 源码位于 src/main/kotlin/.../vendor/{backdrop,shapes}/，含上游 LICENSE
 }

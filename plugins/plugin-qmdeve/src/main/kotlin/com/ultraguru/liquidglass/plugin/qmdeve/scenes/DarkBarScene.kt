@@ -131,9 +131,9 @@ internal object DarkBarScene {
             item.setOnClickListener {
                 selected = index
                 navItemViews.forEachIndexed { i, (ic, tx) ->
-                    val tint = if (i == selected) Color.WHITE else 0x80FFFFFF
+                    val tint = if (i == selected) Color.WHITE.toLong() else 0x80FFFFFF
                     ic.setIconColor(tint)
-                    tx.setTextColor(tint)
+                    tx.setTextColor(tint.toInt())
                 }
             }
             navItemViews += icon to text
@@ -190,7 +190,7 @@ internal object DarkBarScene {
         return android.widget.TextView(context).apply {
             text = "滚动卡片 #$i"
             textSize = 15f
-            setTextColor(0xE6FFFFFF)
+            setTextColor(0xE6FFFFFF.toInt())
             gravity = Gravity.CENTER_VERTICAL or Gravity.START
             setPadding(context.dpi(16), 0, context.dpi(16), 0)
             background = bg

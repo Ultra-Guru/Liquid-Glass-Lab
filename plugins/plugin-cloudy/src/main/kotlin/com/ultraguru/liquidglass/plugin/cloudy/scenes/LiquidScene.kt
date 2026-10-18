@@ -70,7 +70,7 @@ fun LiquidScene() {
             .fillMaxSize()
             .onSizeChanged { coords ->
                 if (!initialized) {
-                    position.snapTo(Offset(coords.width / 2f, coords.height * 0.42f))
+                    scope.launch { position.snapTo(Offset(coords.width / 2f, coords.height * 0.42f)) }
                     initialized = true
                 }
             }
