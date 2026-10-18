@@ -221,7 +221,17 @@ jobs:
             --repo "$REPO" \
             --title "液态玻璃实验室 $TAG" \
             --notes "见 changelog.json 与仓库 docs/UPDATE_PIPELINE.md" || true
-          gh release upload "$TAG" dist/*.apk patches-out/*.vcdiff SHA256SUMS.apk --repo "$REPO" --clobber || true
+          # 补丁目录可能为空（首版）—— nullglob 避免 glob 无匹配中止整条命令
+          shopt -s nullglob
+          PATCHES=(patches-out/*.vcdiff)
+          shopt -u nullglob
+          if [ "${#PATCHES[@]}" -gt 0 ]; then
+            gh release upload "$TAG" dist/*.apk "${PATCHES[@]}" SHA256SUMS.apk --repo "$REPO" --clobber
+          else
+            gh release upload "$TAG" dist/*.apk SHA256SUMS.apk --repo "$REPO" --clobber
+          fi
+          echo "已上传资产："
+          ls dist/
 
       - name: 生成并回写四清单
         env:
