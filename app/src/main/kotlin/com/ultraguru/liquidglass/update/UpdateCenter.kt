@@ -106,9 +106,9 @@ object UpdateCenter {
         if (directPatch != null && directPatch.url.isNotBlank() && patchFrom(directPatch) == currentVersionCode) {
             onState(AppState.Downloading(0, "增量补丁"))
             val patchFile = File(updatesDir, "patch_to_${manifest.versionCode}.vcdiff")
-            Downloader.download(directPatch.resolve(mirrorBase), patchFile) { p ->
+            Downloader.download(directPatch.resolve(mirrorBase), patchFile, onProgress = { p ->
                 onState(AppState.Downloading(p, "增量补丁"))
-            }
+            }, boost = boost)
             onState(AppState.Patching(0))
             applyVcdiff(currentApk, patchFile, target, directPatch) { p -> onState(AppState.Patching(p)) }
             patchFile.delete()
@@ -122,9 +122,9 @@ object UpdateCenter {
         if (window != null && window.url.isNotBlank()) {
             onState(AppState.Downloading(0, "窗口补丁"))
             val patchFile = File(updatesDir, "patch_w_${manifest.versionCode}.vcdiff")
-            Downloader.download(window.resolve(mirrorBase), patchFile) { p ->
+            Downloader.download(window.resolve(mirrorBase), patchFile, onProgress = { p ->
                 onState(AppState.Downloading(p, "窗口补丁"))
-            }
+            }, boost = boost)
             onState(AppState.Patching(0))
             applyVcdiff(currentApk, patchFile, target, window) { p -> onState(AppState.Patching(p)) }
             patchFile.delete()
@@ -134,9 +134,9 @@ object UpdateCenter {
         // 3) 全量
         val full = manifest.download ?: throw IllegalStateException("远端版本更高但无可用资产")
         onState(AppState.Downloading(0, "全量 APK"))
-        Downloader.download(full.resolve(mirrorBase), target) { p ->
+        Downloader.download(full.resolve(mirrorBase), target, onProgress = { p ->
             onState(AppState.Downloading(p, "全量 APK"))
-        }
+        }, boost = boost)
         val sha = PluginRegistry.sha256Of(target)
         if (!sha.equals(full.sha256, ignoreCase = true)) {
             target.delete()
@@ -203,9 +203,9 @@ object UpdateCenter {
             val target = if (patch != null && patch.url.isNotBlank()) {
                 onProgress(InstallState.Downloading(0))
                 val patchFile = File(PluginRegistry.downloadsDir(), "plugin-$pluginId-patch.vcdiff")
-                Downloader.download(patch.resolve(mirrorBase), patchFile) { p ->
+                Downloader.download(patch.resolve(mirrorBase), patchFile, onProgress = { p ->
                     onProgress(InstallState.Downloading(p))
-                }
+                }, boost = boost)
                 onProgress(InstallState.Installing(5))
                 val source = File(PluginRegistry.pluginsRoot(), current!!.fileName)
                 applyVcdiff(source, patchFile, tempFull, patch) { p ->
