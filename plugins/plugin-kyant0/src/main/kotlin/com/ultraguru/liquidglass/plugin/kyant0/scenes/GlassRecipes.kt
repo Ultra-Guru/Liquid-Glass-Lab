@@ -1,6 +1,7 @@
 package com.ultraguru.liquidglass.plugin.kyant0.scenes
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
