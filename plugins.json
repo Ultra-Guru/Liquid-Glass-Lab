@@ -1,21 +1,29 @@
 {
   "schema": "liquid-glass-lab.plugins.v1",
-  "generatedAt": "2026-10-18T04:11:12Z",
+  "generatedAt": "2026-10-18T04:15:44Z",
   "tag": "v0.1.0",
   "plugins": [
     {
       "id": "kyant0",
       "name": "Kyant0 · AndroidLiquidGlass",
       "versionName": "0.1.0",
-      "versionCode": 2,
+      "versionCode": 3,
       "minHostVersionCode": 1,
       "apk": {
-        "url": "https://github.com/Ultra-Guru/Liquid-Glass-Lab/releases/download/v0.1.0/plugin-kyant0-v0.1.0-vc2.apk",
-        "path": "releases/download/v0.1.0/plugin-kyant0-v0.1.0-vc2.apk",
+        "url": "https://github.com/Ultra-Guru/Liquid-Glass-Lab/releases/download/v0.1.0/plugin-kyant0-v0.1.0-vc3.apk",
+        "path": "releases/download/v0.1.0/plugin-kyant0-v0.1.0-vc3.apk",
         "sizeBytes": 2581102,
-        "sha256": "e67de8a7f2f6fe8230dda2fa864333d1045245bb3c3246893bb5fb969ab94058"
+        "sha256": "fbaf10281f9101a37467075857909b67e0ce81b34aeca7cc4ff1e3f6b7c227c8"
       },
-      "patches": [],
+      "patches": [
+        {
+          "url": "https://github.com/Ultra-Guru/Liquid-Glass-Lab/releases/download/v0.1.0/plugin-kyant0_v2_to_vv0.1.0.vcdiff",
+          "path": "releases/download/v0.1.0/plugin-kyant0_v2_to_vv0.1.0.vcdiff",
+          "sizeBytes": 780426,
+          "sha256": "f4cea61a0f9e919ae43d51f3d4d2bdca4509e350e68fb2c018533551da500029",
+          "fromVersionCode": 2
+        }
+      ],
       "changelog": [
         "v0.1.0：随 v0.1.0 发布（宿主/插件版本对齐）"
       ]
@@ -24,15 +32,23 @@
       "id": "cloudy",
       "name": "skydoves · Cloudy",
       "versionName": "0.1.0",
-      "versionCode": 2,
+      "versionCode": 3,
       "minHostVersionCode": 1,
       "apk": {
-        "url": "https://github.com/Ultra-Guru/Liquid-Glass-Lab/releases/download/v0.1.0/plugin-cloudy-v0.1.0-vc2.apk",
-        "path": "releases/download/v0.1.0/plugin-cloudy-v0.1.0-vc2.apk",
+        "url": "https://github.com/Ultra-Guru/Liquid-Glass-Lab/releases/download/v0.1.0/plugin-cloudy-v0.1.0-vc3.apk",
+        "path": "releases/download/v0.1.0/plugin-cloudy-v0.1.0-vc3.apk",
         "sizeBytes": 20325914,
-        "sha256": "b8a50e20ea202e7325be87577607a561095c0a3bbc367a217c7e49bb9490081d"
+        "sha256": "26bf72981fd7b7c76391278a01ea40b4d7b64cf69c6568bdc9c6f88a865401e4"
       },
-      "patches": [],
+      "patches": [
+        {
+          "url": "https://github.com/Ultra-Guru/Liquid-Glass-Lab/releases/download/v0.1.0/plugin-cloudy_v2_to_vv0.1.0.vcdiff",
+          "path": "releases/download/v0.1.0/plugin-cloudy_v2_to_vv0.1.0.vcdiff",
+          "sizeBytes": 7047770,
+          "sha256": "0e5c301146185d2da4fedab4abba88d140cad0f3fb202ee8d18b140056d6d5c9",
+          "fromVersionCode": 2
+        }
+      ],
       "changelog": [
         "v0.1.0：随 v0.1.0 发布（宿主/插件版本对齐）"
       ]
@@ -41,15 +57,23 @@
       "id": "qmdeve",
       "name": "QmDeve · AndroidLiquidGlassView",
       "versionName": "0.1.0",
-      "versionCode": 2,
+      "versionCode": 3,
       "minHostVersionCode": 1,
       "apk": {
-        "url": "https://github.com/Ultra-Guru/Liquid-Glass-Lab/releases/download/v0.1.0/plugin-qmdeve-v0.1.0-vc2.apk",
-        "path": "releases/download/v0.1.0/plugin-qmdeve-v0.1.0-vc2.apk",
+        "url": "https://github.com/Ultra-Guru/Liquid-Glass-Lab/releases/download/v0.1.0/plugin-qmdeve-v0.1.0-vc3.apk",
+        "path": "releases/download/v0.1.0/plugin-qmdeve-v0.1.0-vc3.apk",
         "sizeBytes": 3749008,
-        "sha256": "621050ff154aef09d74b613132e59f0f774e7a24b59fa5b67df46cdb0213610f"
+        "sha256": "9e75a1cf216a74334f7a18602506880653c7c3a666c32696565320393d953924"
       },
-      "patches": [],
+      "patches": [
+        {
+          "url": "https://github.com/Ultra-Guru/Liquid-Glass-Lab/releases/download/v0.1.0/plugin-qmdeve_v2_to_vv0.1.0.vcdiff",
+          "path": "releases/download/v0.1.0/plugin-qmdeve_v2_to_vv0.1.0.vcdiff",
+          "sizeBytes": 1132503,
+          "sha256": "40a4f58318f28a958e50a769cb8047d4a8da1fd35d394b5dd84ea14db65db66e",
+          "fromVersionCode": 2
+        }
+      ],
       "changelog": [
         "v0.1.0：随 v0.1.0 发布（宿主/插件版本对齐）"
       ]
@@ -58,15 +82,23 @@
       "id": "qwea0",
       "name": "QWEA0 · Liquid-Glass-Android",
       "versionName": "0.1.0",
-      "versionCode": 2,
+      "versionCode": 3,
       "minHostVersionCode": 1,
       "apk": {
-        "url": "https://github.com/Ultra-Guru/Liquid-Glass-Lab/releases/download/v0.1.0/plugin-qwea0-v0.1.0-vc2.apk",
-        "path": "releases/download/v0.1.0/plugin-qwea0-v0.1.0-vc2.apk",
+        "url": "https://github.com/Ultra-Guru/Liquid-Glass-Lab/releases/download/v0.1.0/plugin-qwea0-v0.1.0-vc3.apk",
+        "path": "releases/download/v0.1.0/plugin-qwea0-v0.1.0-vc3.apk",
         "sizeBytes": 5480489,
-        "sha256": "84d93cba4048153de61411fca56ba8d3d72819040893da8ea011f21878ce7117"
+        "sha256": "b6838e6def7a62cfceb1e9a1cbb5d35254c3347abeac864dc7e48d661b7a96b3"
       },
-      "patches": [],
+      "patches": [
+        {
+          "url": "https://github.com/Ultra-Guru/Liquid-Glass-Lab/releases/download/v0.1.0/plugin-qwea0_v2_to_vv0.1.0.vcdiff",
+          "path": "releases/download/v0.1.0/plugin-qwea0_v2_to_vv0.1.0.vcdiff",
+          "sizeBytes": 1876595,
+          "sha256": "8fe3cb88cd352bf408b0e2fe21b4d5ef25db0d1eb532a23b94f9a8e087e22d70",
+          "fromVersionCode": 2
+        }
+      ],
       "changelog": [
         "v0.1.0：随 v0.1.0 发布（宿主/插件版本对齐）"
       ]
@@ -75,15 +107,23 @@
       "id": "nadeem",
       "name": "NadeemIqbal · liquid-glass",
       "versionName": "0.1.0",
-      "versionCode": 2,
+      "versionCode": 3,
       "minHostVersionCode": 1,
       "apk": {
-        "url": "https://github.com/Ultra-Guru/Liquid-Glass-Lab/releases/download/v0.1.0/plugin-nadeem-v0.1.0-vc2.apk",
-        "path": "releases/download/v0.1.0/plugin-nadeem-v0.1.0-vc2.apk",
+        "url": "https://github.com/Ultra-Guru/Liquid-Glass-Lab/releases/download/v0.1.0/plugin-nadeem-v0.1.0-vc3.apk",
+        "path": "releases/download/v0.1.0/plugin-nadeem-v0.1.0-vc3.apk",
         "sizeBytes": 21776479,
-        "sha256": "0b662e27dcf2b80b92825aad50aaeac48a0b744ac1d29a9774d60921c35c2a10"
+        "sha256": "92a407c389917ef4f8aa92788d02009d4c2d96cfdb8f6b15cb8aadc97d2aaedb"
       },
-      "patches": [],
+      "patches": [
+        {
+          "url": "https://github.com/Ultra-Guru/Liquid-Glass-Lab/releases/download/v0.1.0/plugin-nadeem_v2_to_vv0.1.0.vcdiff",
+          "path": "releases/download/v0.1.0/plugin-nadeem_v2_to_vv0.1.0.vcdiff",
+          "sizeBytes": 7419022,
+          "sha256": "6bca83e40c22923773428c9b9dbc23c87e547e4b73c44ad669302ba46c1a5eeb",
+          "fromVersionCode": 2
+        }
+      ],
       "changelog": [
         "v0.1.0：随 v0.1.0 发布（宿主/插件版本对齐）"
       ]
