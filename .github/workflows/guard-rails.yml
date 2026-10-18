@@ -1,0 +1,95 @@
+name: guard-rails
+
+# ── 守门规则（PR / push main）───────────────────────────────────────────
+# 1. 四清单 json 结构校验（与 ci.yml 的 manifests-guard 互补，独立触发粒度更细）
+# 2. 插件模块 ↔ plugins.json 插件 id 对账
+# 3. gradle wrapper 完整性
+# 4. 关键命名契约静态检查（补丁命名正则与 App 端 patchFrom 保持一致）
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'version.json'
+      - 'plugins.json'
+      - 'patches.json'
+      - 'changelog.json'
+      - 'plugins/**'
+      - '.github/**'
+      - 'gradle/**'
+  pull_request:
+    paths:
+      - 'version.json'
+      - 'plugins.json'
+      - 'patches.json'
+      - 'changelog.json'
+      - 'plugins/**'
+      - '.github/**'
+      - 'gradle/**'
+
+permissions:
+  contents: read
+
+jobs:
+  guards:
+    name: 清单 + 命名契约守门
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 清单结构与跨文件一致性
+        run: |
+          python3 - << 'EOF'
+          import json, re, pathlib, sys
+
+          root = pathlib.Path(".")
+          problems = []
+
+          version = json.loads((root/"version.json").read_text())
+          plugins = json.loads((root/"plugins.json").read_text())
+          patches = json.loads((root/"patches.json").read_text())
+          changelog = json.loads((root/"changelog.json").read_text())
+
+          # 1) 版本单调性：changelog 首条应 == version.json
+          if changelog:
+              top = changelog[0]
+              if top.get("versionCode") != version["versionCode"]:
+                  problems.append(f"changelog 顶条 {top.get('versionCode')} != version.json {version['versionCode']}")
+
+          # 2) 补丁命名契约（与 App 端 UpdateCenter.patchFrom 正则一致）
+          pat = re.compile(r"patch_v(\d+)_to_v[\w.\-]+\.vcdiff")
+          plg = re.compile(r"plugin-(\w+)_v(\d+)_to_v[\w.\-]+\.vcdiff")
+          for b in patches.get("bases", []):
+              for key in ("url", "path"):
+                  v = b.get(key)
+                  if v and "/patch_" in v and not pat.search(v):
+                      problems.append(f"App 补丁命名违规: {v}")
+          for p in plugins.get("plugins", []):
+              for patch in p.get("patches", []):
+                  for key in ("url", "path"):
+                      v = patch.get(key)
+                      if v and "/plugin-" in v and not plg.search(v):
+                          problems.append(f"插件 {p['id']} 补丁命名违规: {v}")
+
+          # 3) 插件目录对账
+          on_disk = {x.name.replace("plugin-", "") for x in (root/"plugins").iterdir() if x.is_dir()}
+          in_manifest = {p["id"] for p in plugins.get("plugins", [])}
+          if on_disk != in_manifest:
+              problems.append(f"plugins/ 目录 {sorted(on_disk)} ≠ plugins.json {sorted(in_manifest)}")
+
+          # 4) 版本字段类型
+          for p in plugins.get("plugins", []):
+              if not isinstance(p.get("versionCode"), int) or p["versionCode"] < 1:
+                  problems.append(f"插件 {p.get('id')} versionCode 非法")
+
+          if problems:
+              print("❌ 守门失败：")
+              for x in problems:
+                  print("  -", x)
+              sys.exit(1)
+          print("✅ 守门通过：版本单调 / 命名契约 / 目录对账 / 字段类型")
+          EOF
+
+      - name: Gradle wrapper 完整性
+        uses: gradle/actions/wrapper-validation@v4

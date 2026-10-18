@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- 增量更新合成的新 APK 存放位置（files/updates/…），安装器经 FileProvider 读取 -->
+    <files-path name="updates" path="updates/" />
+</paths>

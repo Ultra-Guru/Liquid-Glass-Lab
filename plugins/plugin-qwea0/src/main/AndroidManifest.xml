@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:hasCode="true"
+        android:label="QWEA0 Liquid-Glass 插件">
+
+        <meta-data
+            android:name="com.ultraguru.liquidglass.PLUGIN_ENTRY"
+            android:value="com.ultraguru.liquidglass.plugin.qwea0.Qwea0Plugin" />
+    </application>
+</manifest>

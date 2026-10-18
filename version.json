@@ -1,0 +1,12 @@
+{
+  "schema": "liquid-glass-lab.version.v1",
+  "versionName": "0.1.0",
+  "versionCode": 1,
+  "tag": null,
+  "publishedAt": null,
+  "download": null,
+  "patch": null,
+  "commitSha": null,
+  "signingCertSha256": null,
+  "minAndroid": 33
+}

@@ -1,0 +1,13 @@
+[
+  {
+    "versionCode": 1,
+    "versionName": "0.1.0",
+    "tag": null,
+    "date": "2026-10-18",
+    "notes": [
+      "初始版本：主列表（五库 + 关于 + 设置）与插件化框架落地",
+      "插件契约 plugin-api v1：DexClassLoader 隔离加载 + 四大场景规约",
+      "单仓库增量更新链：version.json / plugins.json / patches.json / changelog.json"
+    ]
+  }
+]

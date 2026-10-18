@@ -1,0 +1,171 @@
+name: ci
+
+# ── 持续集成：宿主 + 插件矩阵 ─────────────────────────────────────────
+# 设计要点：
+#   1. 宿主与 5 个插件拆成独立 job（插件矩阵 fail-fast=false）——
+#      任一插件失败不阻塞其余插件定位；
+#   2. 所有模块 release 变体编译 = 「编译验证必须用 GitHub Actions」的落地；
+#   3. manifests-guard 做三清单（version/plugins/patches/changelog）格式门禁。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  host:
+    name: 宿主 App（assembleDebug + assembleRelease）
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Gradle（缓存）
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: 确保 SDK platform 37 / build-tools 就绪
+        run: |
+          if [ ! -d "$ANDROID_HOME/platforms/android-37" ]; then
+            yes | sdkmanager "platforms;android-37" >/dev/null || true
+          fi
+          sdkmanager --list_installed | head -20
+
+      - name: assembleDebug
+        run: ./gradlew :app:assembleDebug --stacktrace
+
+      - name: assembleRelease（PR 无 secrets → 未签名，同样验证编译）
+        run: ./gradlew :app:assembleRelease --stacktrace
+
+      - name: plugin-api 编译校验（AAR）
+        run: ./gradlew :plugin-api:assembleRelease --stacktrace
+
+      - name: 上传宿主 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: host-app-debug
+          path: app/build/outputs/apk/debug/*.apk
+          retention-days: 7
+
+  plugins:
+    name: 插件矩阵（${{ matrix.module }}）
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { module: plugin-kyant0, label: Kyant0 }
+          - { module: plugin-cloudy, label: Cloudy }
+          - { module: plugin-qmdeve, label: QmDeve }
+          - { module: plugin-qwea0, label: QWEA0 }
+          - { module: plugin-nadeem, label: Nadeem }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Gradle（缓存）
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: 确保 SDK platform 37 就绪
+        run: |
+          if [ ! -d "$ANDROID_HOME/platforms/android-37" ]; then
+            yes | sdkmanager "platforms;android-37" >/dev/null || true
+          fi
+
+      - name: assembleRelease（插件 APK）
+        run: ./gradlew ":plugins:${{ matrix.module }}:assembleRelease" --stacktrace
+
+      - name: 上传插件 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-${{ matrix.module }}
+          path: plugins/${{ matrix.module }}/build/outputs/apk/release/*.apk
+          retention-days: 7
+
+  manifests-guard:
+    name: 清单门禁（version / plugins / patches / changelog）
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JSON 结构与一致性校验
+        run: |
+          python3 - << 'EOF'
+          import json, sys, pathlib
+
+          root = pathlib.Path(".")
+          ok = True
+
+          def load(p):
+              global ok
+              try:
+                  return json.loads((root / p).read_text(encoding="utf-8"))
+              except Exception as e:
+                  print(f"❌ {p}: 解析失败 - {e}")
+                  ok = False
+                  return None
+
+          v = load("version.json")
+          if v is not None:
+              for k in ("schema", "versionName", "versionCode"):
+                  if k not in v:
+                      print(f"❌ version.json 缺字段 {k}"); ok = False
+              if v.get("versionCode", 0) < 1:
+                  print("❌ version.json versionCode 必须 ≥ 1"); ok = False
+
+          p = load("plugins.json")
+          if p is not None:
+              ids = [x.get("id") for x in p.get("plugins", [])]
+              if len(ids) != len(set(ids)):
+                  print("❌ plugins.json 存在重复插件 id"); ok = False
+              expected = {"kyant0", "cloudy", "qmdeve", "qwea0", "nadeem"}
+              missing = expected - set(ids)
+              if missing:
+                  print(f"❌ plugins.json 缺少插件: {missing}"); ok = False
+              for rel in p.get("plugins", []):
+                  if rel.get("apk") is not None:
+                      a = rel["apk"]
+                      for k in ("url", "sha256"):
+                          if not a.get(k):
+                              print(f"❌ 插件 {rel['id']} 的 apk 缺 {k}"); ok = False
+
+          patches = load("patches.json")
+          if patches is not None and "bases" not in patches:
+              print("❌ patches.json 缺 bases"); ok = False
+
+          c = load("changelog.json")
+          if c is not None and not isinstance(c, list):
+              print("❌ changelog.json 必须是数组"); ok = False
+
+          # 插件模块与 plugins/ 目录对账
+          on_disk = {x.name.replace("plugin-", "") for x in (root / "plugins").iterdir() if x.is_dir()}
+          expected = {"kyant0", "cloudy", "qmdeve", "qwea0", "nadeem"}
+          if on_disk != expected:
+              print(f"❌ plugins/ 目录与预期不符: {on_disk ^ expected}"); ok = False
+
+          if not ok:
+              sys.exit(1)
+          print("✅ 清单门禁通过")
+          EOF
+
+      - name: Gradle wrapper 校验
+        uses: gradle/actions/wrapper-validation@v4

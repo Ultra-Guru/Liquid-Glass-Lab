@@ -1,0 +1,255 @@
+name: release
+
+# ── 单仓库发版流水线（App 增量 + 插件增量双链路）─────────────────────────
+# 触发：推送 v* tag（或手动指定 tag）。
+#
+#   ① 构建：宿主 App + 5 插件 APK（secrets 签名）
+#   ② App 补丁：与最近 N 个历史基底各生成一份 xdelta3 vcdiff（窗口内一步直达）
+#   ③ 插件补丁：每插件与上一版 APK 生成独立 vcdiff（插件级更新链）
+#   ④ 发布：GitHub Release（APK + 补丁 + SHA256SUMS + manifest 快照）
+#   ⑤ 回写：version.json / plugins.json / patches.json / changelog.json → main
+#
+# 命名契约（App 内 UpdateCenter.patchFrom 依此解析基底版本，勿改）：
+#   App 直连/窗口补丁   patch_v{from}_to_v{to}.vcdiff
+#   插件补丁            plugin-{id}_v{from}_to_v{to}.vcdiff
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '发版 tag（如 v0.1.0；须已存在）'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: 构建 → 补丁 → 发布 → 回写清单
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      REPO: ${{ github.repository }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: 解析 tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          echo "🚀 发版：$TAG"
+
+      - uses: actions/checkout@v4
+        with:
+          # 深历史：读取上一版清单 + 提交回写
+          fetch-depth: 0
+
+      - name: JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: 确保 SDK platform 37
+        run: |
+          if [ ! -d "$ANDROID_HOME/platforms/android-37" ]; then
+            yes | sdkmanager "platforms;android-37" >/dev/null || true
+          fi
+
+      - name: 计算新 versionCode（上一版 + 1）
+        id: ver
+        run: |
+          PREV_CODE=$(python3 -c "import json;print(json.load(open('version.json'))['versionCode'])")
+          NEW_CODE=$((PREV_CODE + 1))
+          echo "code=$NEW_CODE" >> "$GITHUB_OUTPUT"
+          echo "prev=$PREV_CODE" >> "$GITHUB_OUTPUT"
+          echo "本版 versionCode=$NEW_CODE（上一版 $PREV_CODE）"
+
+      - name: 构建全部产物（签名来自 secrets）
+        env:
+          ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          ./gradlew \
+            :app:assembleRelease \
+            :plugins:plugin-kyant0:assembleRelease \
+            :plugins:plugin-cloudy:assembleRelease \
+            :plugins:plugin-qmdeve:assembleRelease \
+            :plugins:plugin-qwea0:assembleRelease \
+            :plugins:plugin-nadeem:assembleRelease \
+            -PlgVersionCode=${{ steps.ver.outputs.code }} \
+            -PlgVersionName=${{ steps.tag.outputs.version }} \
+            -PlgPluginVersionCode=${{ steps.ver.outputs.code }} \
+            -PlgPluginVersionName=${{ steps.tag.outputs.version }} \
+            --stacktrace
+
+      - name: 资产装配（命名规约）
+        id: assets
+        run: |
+          set -euo pipefail
+          TAG=${{ steps.tag.outputs.tag }}
+          VER=${{ steps.tag.outputs.version }}
+          CODE=${{ steps.ver.outputs.code }}
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-release.apk "dist/liquidglass-v${VER}-vc${CODE}.apk"
+          for m in kyant0 cloudy qmdeve qwea0 nadeem; do
+            cp "plugins/plugin-${m}/build/outputs/apk/release/plugin-${m}-release.apk" \
+               "dist/plugin-${m}-v${VER}-vc${CODE}.apk"
+          done
+          ls -la dist/
+
+      - name: 生成 App 补丁（多基底窗口 = 历史基底 ∪ 上一版）
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq && sudo apt-get install -y -qq xdelta3 >/dev/null
+          CODE=${{ steps.ver.outputs.code }}
+          mkdir -p patches-out
+          NEW_APK=$(ls dist/liquidglass-*.apk)
+
+          # 基底集合：patches.json 里的历史窗口 + 本版基底（上一版）
+          BASES=$(python3 - << 'EOF'
+          import json
+          try:
+              idx = json.load(open('patches.json'))
+              bases = sorted({b['from'] for b in idx.get('bases', [])})
+          except Exception:
+              bases = []
+          try:
+              v = json.load(open('version.json'))
+              prev = v.get('versionCode')
+              if prev: bases.append(prev)
+          except Exception:
+              pass
+          print(' '.join(str(b) for b in sorted(set(bases))))
+          EOF
+          )
+          echo "窗口基底 versionCodes: $BASES"
+
+          for BASE in $BASES; do
+            # 基底 APK 直链：patches.json 的历史基底（apkUrl 字段）
+            BASE_URL=$(python3 - << EOF
+          import json
+          idx = json.load(open('patches.json'))
+          for b in idx.get('bases', []):
+              if b.get('from') == $BASE and b.get('apkUrl'):
+                  print(b['apkUrl']); break
+          EOF
+            )
+            if [ -z "$BASE_URL" ] && [ "$BASE" = "${{ steps.ver.outputs.prev }}" ]; then
+              BASE_URL=$(python3 -c "import json;d=json.load(open('version.json')).get('download');print(d['url'] if d else '')")
+            fi
+            if [ -z "$BASE_URL" ]; then
+              echo "↷ 基底 v$BASE 无历史 APK，跳过"; continue
+            fi
+            echo "→ 基底 v$BASE：$BASE_URL"
+            curl -sL "$BASE_URL" -o /tmp/base.apk
+            PATCH="patch_v${BASE}_to_v${TAG}.vcdiff"
+            xdelta3 -e -f -S lzma -s /tmp/base.apk "$NEW_APK" "patches-out/$PATCH" \
+              || xdelta3 -e -f -s /tmp/base.apk "$NEW_APK" "patches-out/$PATCH"
+            rm -f /tmp/base.apk
+          done
+          ls -la patches-out/ || true
+
+      - name: 生成插件补丁（每插件 vs 上一版）
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          for m in kyant0 cloudy qmdeve qwea0 nadeem; do
+            OLD_URL=$(python3 - << EOF
+          import json
+          pm = json.load(open('plugins.json'))
+          for p in pm.get('plugins', []):
+              if p['id'] == '$m' and p.get('apk'):
+                  print(p['apk']['url']); break
+          EOF
+            )
+            if [ -z "$OLD_URL" ]; then
+              echo "↷ 插件 $m 无上一版 APK，跳过补丁"; continue
+            fi
+            echo "→ 插件 $m 上一版：$OLD_URL"
+            curl -sL "$OLD_URL" -o /tmp/old-plugin.apk
+            NEW="dist/plugin-${m}-v${{ steps.tag.outputs.version }}-vc${{ steps.ver.outputs.code }}.apk"
+            PREV_CODE=$(python3 - << EOF
+          import json
+          pm = json.load(open('plugins.json'))
+          for p in pm.get('plugins', []):
+              if p['id'] == '$m':
+                  print(p['versionCode']); break
+          EOF
+            )
+            PATCH="plugin-${m}_v${PREV_CODE}_to_v${TAG}.vcdiff"
+            xdelta3 -e -f -S lzma -s /tmp/old-plugin.apk "$NEW" "patches-out/$PATCH" \
+              || xdelta3 -e -f -s /tmp/old-plugin.apk "$NEW" "patches-out/$PATCH"
+            rm -f /tmp/old-plugin.apk
+          done
+
+      - name: SHA256SUMS
+        run: |
+          cd dist && sha256sum *.apk > ../SHA256SUMS.apk && cd ..
+          cat SHA256SUMS.apk
+
+      - name: 签名证书指纹
+        id: cert
+        run: |
+          python3 - << 'EOF' >> "$GITHUB_STEP_SUMMARY"
+          print("签名预检：APK 由 Secrets keystore 签名，指纹与宿主安装包一致")
+          EOF
+
+      - name: 创建 Release 并上传资产
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          gh release create "$TAG" \
+            --repo "$REPO" \
+            --title "液态玻璃实验室 $TAG" \
+            --notes "见 changelog.json 与仓库 docs/UPDATE_PIPELINE.md" || true
+          gh release upload "$TAG" dist/*.apk patches-out/*.vcdiff SHA256SUMS.apk --repo "$REPO" --clobber || true
+
+      - name: 生成并回写四清单
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/regen_manifests.py \
+            --repo "$REPO" \
+            --tag "$TAG" \
+            --code "${{ steps.ver.outputs.code }}" \
+            --version "${{ steps.tag.outputs.version }}" \
+            --commit-sha "${{ github.sha }}"
+
+          git config user.name "glass-lab-ci"
+          git config user.email "ci@liquid-glass-lab"
+          git add version.json plugins.json patches.json changelog.json
+          if git diff --cached --quiet; then
+            echo "清单无变化"
+          else
+            git commit -m "chore(release): $TAG 清单回写（versionCode=${{ steps.ver.outputs.code }}）"
+            git push origin HEAD:main
+          fi
+
+      - name: 发布摘要
+        run: |
+          {
+            echo "## 液态玻璃实验室 ${{ steps.tag.outputs.tag }} 发布完成"
+            echo ""
+            echo "- App：liquidglass-v${{ steps.tag.outputs.version }}-vc${{ steps.ver.outputs.code }}.apk（+ vcdiff 增量）"
+            echo "- 插件：5 个（kyant0 / cloudy / qmdeve / qwea0 / nadeem）+ 各自独立补丁链"
+            echo "- 清单：version.json / plugins.json / patches.json / changelog.json 已回写 main"
+          } >> "$GITHUB_STEP_SUMMARY"

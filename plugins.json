@@ -1,0 +1,67 @@
+{
+  "schema": "liquid-glass-lab.plugins.v1",
+  "generatedAt": null,
+  "tag": null,
+  "plugins": [
+    {
+      "id": "kyant0",
+      "name": "Kyant0 · AndroidLiquidGlass",
+      "versionName": "0.1.0",
+      "versionCode": 1,
+      "minHostVersionCode": 1,
+      "apk": null,
+      "patches": [],
+      "changelog": [
+        "等待首个 Release（tag v*）发布插件 APK"
+      ]
+    },
+    {
+      "id": "cloudy",
+      "name": "skydoves · Cloudy",
+      "versionName": "0.1.0",
+      "versionCode": 1,
+      "minHostVersionCode": 1,
+      "apk": null,
+      "patches": [],
+      "changelog": [
+        "等待首个 Release（tag v*）发布插件 APK"
+      ]
+    },
+    {
+      "id": "qmdeve",
+      "name": "QmDeve · AndroidLiquidGlassView",
+      "versionName": "0.1.0",
+      "versionCode": 1,
+      "minHostVersionCode": 1,
+      "apk": null,
+      "patches": [],
+      "changelog": [
+        "等待首个 Release（tag v*）发布插件 APK"
+      ]
+    },
+    {
+      "id": "qwea0",
+      "name": "QWEA0 · Liquid-Glass-Android",
+      "versionName": "0.1.0",
+      "versionCode": 1,
+      "minHostVersionCode": 1,
+      "apk": null,
+      "patches": [],
+      "changelog": [
+        "等待首个 Release（tag v*）发布插件 APK"
+      ]
+    },
+    {
+      "id": "nadeem",
+      "name": "NadeemIqbal · liquid-glass",
+      "versionName": "0.1.0",
+      "versionCode": 1,
+      "minHostVersionCode": 1,
+      "apk": null,
+      "patches": [],
+      "changelog": [
+        "等待首个 Release（tag v*）发布插件 APK"
+      ]
+    }
+  ]
+}

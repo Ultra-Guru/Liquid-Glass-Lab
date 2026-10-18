@@ -1,0 +1,61 @@
+[versions]
+# ── 工具链（2026-10 最新稳定线，用户要求高版本）────────────────────────────
+# AGP 9.4.1：9.x 线最新稳定 patch；Gradle 9.8.1 与之配套。
+agp = "9.4.1"
+# Kotlin 2.4.21：2.4 线最新 patch。Compose 编译器随 Kotlin 版本捆绑（plugin.compose）。
+kotlin = "2.4.21"
+# ── AndroidX ───────────────────────────────────────────────────────────
+composeBom = "2026.09.00"
+activityCompose = "1.13.0"
+lifecycle = "2.11.0"
+coreKtx = "1.19.1"
+# ── Kotlin 生态 ───────────────────────────────────────────────────────
+kotlinxSerialization = "1.9.0"
+kotlinxCoroutines = "1.11.0"
+# ── 网络 / 增量更新 ────────────────────────────────────────────────────
+okhttp = "5.5.0"
+xz = "1.12"
+# ── 五大液态玻璃库（均走 Maven Central / JitPack，无需 vendoring）─────────
+# kyant0 AndroidLiquidGlass → io.github.kyant0:backdrop（androidx Compose 线最高版；
+# 2.0.x 已切换 JetBrains Compose 坐标系，本仓 androidx 体系取 1.0.6）
+backdrop = "1.0.6"
+# skydoves Cloudy → 1.0.0-alpha01 起含 liquidGlass modifier（Compose MP）
+cloudy = "1.0.0-alpha01"
+# QmDeve AndroidLiquidGlassView → View 体系真实折射（minCompileSdk=37）
+qmdeve = "1.1.0"
+# QWEA0 Liquid-Glass-Android → 仅 JitPack，v2.0.11 构建绿（AAR 内含 arm .so）
+qwea0 = "v2.0.11"
+# NadeemIqbal liquid-glass → GlassCard/Button/NavBar 组件化
+nadeem = "0.2.3"
+
+[libraries]
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }
+
+compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+compose-ui = { group = "androidx.compose.ui", name = "ui" }
+compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
+compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
+compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+compose-material-icons = { group = "androidx.compose.material", name = "material-icons-extended" }
+
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }
+
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+xz = { group = "org.tukaani", name = "xz", version.ref = "xz" }
+
+# ── 液态玻璃库（各插件独立消费，天然插件级隔离）────────────────────────────
+glass-backdrop = { group = "io.github.kyant0", name = "backdrop", version.ref = "backdrop" }
+glass-cloudy = { group = "com.github.skydoves", name = "cloudy", version.ref = "cloudy" }
+glass-qmdeve = { group = "com.qmdeve.liquidglass", name = "core", version.ref = "qmdeve" }
+glass-qwea0 = { group = "com.github.QWEA0", name = "liquidglass", version.ref = "qwea0" }
+glass-nadeem = { group = "io.github.nadeemiqbal", name = "liquid-glass", version.ref = "nadeem" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
