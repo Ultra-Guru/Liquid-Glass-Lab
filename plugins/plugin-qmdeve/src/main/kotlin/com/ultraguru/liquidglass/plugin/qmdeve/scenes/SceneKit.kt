@@ -215,7 +215,7 @@ internal class IconView(context: Context, val glyph: Glyph) : View(context) {
 
     fun setIconColor(color: Long) {
         paint.color = color.toInt()
-        fillPaint.color = color
+        fillPaint.color = color.toInt()
         invalidate()
     }
 

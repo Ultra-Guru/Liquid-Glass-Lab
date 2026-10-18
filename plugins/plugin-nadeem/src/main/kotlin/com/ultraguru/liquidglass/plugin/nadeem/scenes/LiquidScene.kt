@@ -76,10 +76,11 @@ internal fun LiquidScene() {
                 .fillMaxSize()
                 .onSizeChanged { box ->
                     if (!started) {
-                        // 初始：液滴居中（snapTo 非挂起，可直接用）
-                        position.snapTo(
-                            Offset((box.width - dropPx) / 2f, (box.height - dropPx) / 2f)
-                        )
+                        // 初始：液滴居中（snapTo 是挂起函数 → 协程包裹）
+                        scope.launch {
+                            position.snapTo(Offset((box.width - dropPx) / 2f, (box.height - dropPx) / 2f))
+                        }
+                        started = true
                     }
                 }
                 .pointerInput(Unit) {

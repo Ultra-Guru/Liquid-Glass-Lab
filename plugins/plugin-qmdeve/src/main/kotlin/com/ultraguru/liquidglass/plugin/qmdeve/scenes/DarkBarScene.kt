@@ -72,7 +72,7 @@ internal object DarkBarScene {
             setPadding(context.dpi(18), 0, context.dpi(18), 0)
         }
         titleRow.addView(
-            IconView(context, IconView.Glyph.STAR).apply { setIconColor(0xFFFFC24B.toInt()) },
+            IconView(context, IconView.Glyph.STAR).apply { setIconColor(0xFFFFC24B) },
             LinearLayout.LayoutParams(context.dpi(22), context.dpi(22)).apply { rightMargin = context.dpi(10) }
         )
         titleRow.addView(

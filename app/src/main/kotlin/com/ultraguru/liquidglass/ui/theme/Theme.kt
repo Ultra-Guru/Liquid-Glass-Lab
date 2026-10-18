@@ -11,6 +11,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import com.ultraguru.liquidglass.data.ThemeMode
 
+private val Color_AccentError = Color(0xFFFFB4A9)
+
 private val DarkScheme = darkColorScheme(
     primary = BrandRed,
     onPrimary = PaperWhite,
@@ -41,7 +43,6 @@ private val LightScheme = lightColorScheme(
     outline = LightOutline
 )
 
-private val Color_AccentError = androidx.compose.ui.graphics.Color(0xFFFFB4A9)
 
 @Composable
 fun GlassLabTheme(

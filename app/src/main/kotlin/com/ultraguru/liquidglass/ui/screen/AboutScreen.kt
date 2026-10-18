@@ -73,7 +73,7 @@ fun AboutScreen(onBack: () -> Unit) {
             val pm = context.packageManager
             @Suppress("DEPRECATION")
             val pi = pm.getPackageInfo(context.packageName, 0)
-            pi.versionName to pi.versionCode
+            (pi.versionName ?: "?") to pi.versionCode
         }.getOrDefault("?" to 1)
     }
 
