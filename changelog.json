@@ -1,5 +1,15 @@
 [
   {
+    "versionCode": 5,
+    "versionName": "0.1.2",
+    "tag": "v0.1.2",
+    "date": "2026-10-18",
+    "notes": [
+      "宿主与五插件对齐 v0.1.2（versionCode 5）",
+      "App 补丁窗口：2 个基底；插件独立补丁链已更新"
+    ]
+  },
+  {
     "versionCode": 4,
     "versionName": "0.1.1",
     "tag": "v0.1.1",
