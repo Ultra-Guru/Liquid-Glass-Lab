@@ -3,14 +3,20 @@
   "versionName": "0.1.1",
   "versionCode": 4,
   "tag": "v0.1.1",
-  "publishedAt": "2026-10-18T05:00:36Z",
+  "publishedAt": "2026-10-18T05:04:34Z",
   "download": {
     "url": "https://github.com/Ultra-Guru/Liquid-Glass-Lab/releases/download/v0.1.1/liquidglass-v0.1.1-vc4.apk",
     "path": "releases/download/v0.1.1/liquidglass-v0.1.1-vc4.apk",
     "sizeBytes": 47751800,
     "sha256": "b3b562ae3e2920f615784609b2f29526d9412bc7ec215c718fcce5c889ab27bc"
   },
-  "patch": null,
+  "patch": {
+    "url": "https://github.com/Ultra-Guru/Liquid-Glass-Lab/releases/download/v0.1.1/patch_v3_to_v0.1.1.vcdiff",
+    "path": "releases/download/v0.1.1/patch_v3_to_v0.1.1.vcdiff",
+    "sizeBytes": 8812293,
+    "sha256": "287c9fa2bb9f2b5938ce379e638d6de98509ab1f1830c791d9092d3a69f02859",
+    "fromVersionCode": 3
+  },
   "commitSha": "8e9adc29fd9ed1e78925cf2404017f2a8a416864",
   "signingCertSha256": null,
   "minAndroid": 33

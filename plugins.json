@@ -1,6 +1,6 @@
 {
   "schema": "liquid-glass-lab.plugins.v1",
-  "generatedAt": "2026-10-18T05:00:36Z",
+  "generatedAt": "2026-10-18T05:04:34Z",
   "tag": "v0.1.1",
   "plugins": [
     {
@@ -15,7 +15,15 @@
         "sizeBytes": 2581138,
         "sha256": "4514f52e96827d83d9c338fbdda5f27e238a5e71fb4578f6ce7f75bb36d1d984"
       },
-      "patches": [],
+      "patches": [
+        {
+          "url": "https://github.com/Ultra-Guru/Liquid-Glass-Lab/releases/download/v0.1.1/plugin-kyant0_v3_to_v0.1.1.vcdiff",
+          "path": "releases/download/v0.1.1/plugin-kyant0_v3_to_v0.1.1.vcdiff",
+          "sizeBytes": 3226,
+          "sha256": "1148d8ee1d624c7e58e82da63938d5473cd9fc7eab93752e7226c3e48f378602",
+          "fromVersionCode": 3
+        }
+      ],
       "changelog": [
         "v0.1.1：随 v0.1.1 发布（宿主/插件版本对齐）"
       ]
@@ -32,7 +40,15 @@
         "sizeBytes": 20325946,
         "sha256": "c0e8cf26f4f942151043972d87a864376c80036a7624714065cbed8021ad4020"
       },
-      "patches": [],
+      "patches": [
+        {
+          "url": "https://github.com/Ultra-Guru/Liquid-Glass-Lab/releases/download/v0.1.1/plugin-cloudy_v3_to_v0.1.1.vcdiff",
+          "path": "releases/download/v0.1.1/plugin-cloudy_v3_to_v0.1.1.vcdiff",
+          "sizeBytes": 9652,
+          "sha256": "a7ab0869b18ac3e7f66b04cba3a2662bea56e2a4dfd8c944f5bc27edef9a5f65",
+          "fromVersionCode": 3
+        }
+      ],
       "changelog": [
         "v0.1.1：随 v0.1.1 发布（宿主/插件版本对齐）"
       ]
@@ -49,7 +65,15 @@
         "sizeBytes": 3749040,
         "sha256": "2da2b063c2e0e99ab89005f2746691de20ccca65b8cbee9bbe8e92dc8c526c4d"
       },
-      "patches": [],
+      "patches": [
+        {
+          "url": "https://github.com/Ultra-Guru/Liquid-Glass-Lab/releases/download/v0.1.1/plugin-qmdeve_v3_to_v0.1.1.vcdiff",
+          "path": "releases/download/v0.1.1/plugin-qmdeve_v3_to_v0.1.1.vcdiff",
+          "sizeBytes": 4134,
+          "sha256": "1b7c53b917836bf6d6e330b0c8b53b6ccb6c15ccc390c767796d875e73cb34f4",
+          "fromVersionCode": 3
+        }
+      ],
       "changelog": [
         "v0.1.1：随 v0.1.1 发布（宿主/插件版本对齐）"
       ]
@@ -66,7 +90,15 @@
         "sizeBytes": 5480525,
         "sha256": "4ad58aea1f35492137bcf05c9eb1077c7ada214c4c21a75b14380895246c16cc"
       },
-      "patches": [],
+      "patches": [
+        {
+          "url": "https://github.com/Ultra-Guru/Liquid-Glass-Lab/releases/download/v0.1.1/plugin-qwea0_v3_to_v0.1.1.vcdiff",
+          "path": "releases/download/v0.1.1/plugin-qwea0_v3_to_v0.1.1.vcdiff",
+          "sizeBytes": 5546,
+          "sha256": "ae328fe2d8c8a00d69d624ce95d6eded7d2505df5ce20d85d6612c48ffa7f812",
+          "fromVersionCode": 3
+        }
+      ],
       "changelog": [
         "v0.1.1：随 v0.1.1 发布（宿主/插件版本对齐）"
       ]
@@ -83,7 +115,15 @@
         "sizeBytes": 21776511,
         "sha256": "38fd475f0d8d80f5f3cb6a0863c3bff0b1083fc6f786a9ed1520a65df35e60c5"
       },
-      "patches": [],
+      "patches": [
+        {
+          "url": "https://github.com/Ultra-Guru/Liquid-Glass-Lab/releases/download/v0.1.1/plugin-nadeem_v3_to_v0.1.1.vcdiff",
+          "path": "releases/download/v0.1.1/plugin-nadeem_v3_to_v0.1.1.vcdiff",
+          "sizeBytes": 9766,
+          "sha256": "4cbd5e0ae09e7faee50f2612a6b7761197bc93438f5720f07daa0147297908e8",
+          "fromVersionCode": 3
+        }
+      ],
       "changelog": [
         "v0.1.1：随 v0.1.1 发布（宿主/插件版本对齐）"
       ]

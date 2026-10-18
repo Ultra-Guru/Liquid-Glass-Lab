@@ -78,7 +78,8 @@ def main():
         sys.exit(1)
 
     # ── version.json ──
-    direct_patch = patches_out / f"patch_v{prev_version.get('versionCode', 0)}_to_v{args.tag}.vcdiff"
+    # 命名契约：补丁文件名 = patch_v{from}_to_{tag}.vcdiff（tag 自带 v 前缀，勿重复）
+    direct_patch = patches_out / f"patch_v{prev_version.get('versionCode', 0)}_to_{args.tag}.vcdiff"
     version = {
         "schema": "liquid-glass-lab.version.v1",
         "versionName": args.version,
@@ -108,7 +109,7 @@ def main():
             sys.exit(1)
         prev_rel = prev_by_id.get(pid, {})
         prev_code = prev_rel.get("versionCode", 0)
-        patch_name = f"plugin-{pid}_v{prev_code}_to_v{args.tag}.vcdiff"
+        patch_name = f"plugin-{pid}_v{prev_code}_to_{args.tag}.vcdiff"
         has_patch = prev_code > 0 and (patches_out / patch_name).exists()
         rel = {
             "id": pid,
@@ -149,7 +150,7 @@ def main():
     # 补全每个基底的补丁资产（存在才算数）
     final_bases = []
     for b in bases:
-        patch_name = f"patch_v{b['from']}_to_v{args.tag}.vcdiff"
+        patch_name = f"patch_v{b['from']}_to_{args.tag}.vcdiff"
         if (patches_out / patch_name).exists():
             entry = {
                 **asset(args.repo, args.tag, patch_name, patches_out),
