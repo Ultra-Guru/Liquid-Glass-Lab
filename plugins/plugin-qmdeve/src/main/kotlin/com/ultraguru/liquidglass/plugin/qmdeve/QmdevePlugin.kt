@@ -1,20 +1,22 @@
 package com.ultraguru.liquidglass.plugin.qmdeve
 
 import android.content.Context
-import android.graphics.Color
-import android.util.TypedValue
-import android.view.Gravity
 import android.view.View
-import android.widget.TextView
+import android.widget.FrameLayout
 import com.ultraguru.liquidglass.plugin.api.GlassPlugin
 import com.ultraguru.liquidglass.plugin.api.PluginMeta
 import com.ultraguru.liquidglass.plugin.api.SceneIds
 import com.ultraguru.liquidglass.plugin.api.SceneMeta
+import com.ultraguru.liquidglass.plugin.qmdeve.scenes.BiomorphicScene
+import com.ultraguru.liquidglass.plugin.qmdeve.scenes.ButtonsScene
+import com.ultraguru.liquidglass.plugin.qmdeve.scenes.DarkBarScene
+import com.ultraguru.liquidglass.plugin.qmdeve.scenes.LiquidScene
 
 /**
- * 插件 X/5 —— QmDeve · AndroidLiquidGlassView（com.qmdeve.liquidglass:core:1.1.0）。
+ * 插件 3/5 —— QmDeve · AndroidLiquidGlassView（com.qmdeve.liquidglass:core:1.1.0）。
  *
- * 四大场景实现见 scenes/（深色栏 / 按钮 / 液体 / 生物拟态）。
+ * 本插件是纯 View 体系：场景根直接返回自建 View 树（FrameLayout），
+ * 不经 Compose —— GlassGlassView 的 bind/折射在原生 View 层完成。
  */
 class QmdevePlugin : GlassPlugin {
 
@@ -32,23 +34,40 @@ class QmdevePlugin : GlassPlugin {
     )
 
     override val scenes = listOf(
-        SceneMeta(SceneIds.DARK_BAR, "深色栏 UI", "顶栏 + 底部导航玻璃化（Cloudy 渐进模糊 / 折射）"),
-        SceneMeta(SceneIds.BUTTONS, "按钮 UI", "玻璃按钮矩阵 + 按压反馈"),
-        SceneMeta(SceneIds.LIQUID, "液体", "可拖拽弹性液滴"),
-        SceneMeta(SceneIds.BIOMORPHIC, "生物拟态", "有机形态呼吸群落")
+        SceneMeta(
+            SceneIds.DARK_BAR,
+            "深色栏 UI",
+            "LiquidGlassView 玻璃栏 bind 滚动内容 · 折射随卡片流过"
+        ),
+        SceneMeta(
+            SceneIds.BUTTONS,
+            "按钮 UI",
+            "玻璃按钮矩阵 · touchEffect 按压辉光与形变"
+        ),
+        SceneMeta(
+            SceneIds.LIQUID,
+            "液体",
+            "可拖拽液滴 · draggable + elastic 弹簧物理"
+        ),
+        SceneMeta(
+            SceneIds.BIOMORPHIC,
+            "生物拟态",
+            "玻璃细胞群 · setCornerRadius 实时形变 + 色散"
+        )
     )
 
     override fun initialize(context: Context) = Unit
 
     override fun createScene(context: Context, sceneId: String): View =
-        placeholder(context, sceneId)
-
-    private fun placeholder(context: Context, sceneId: String): View =
-        TextView(context).apply {
-            text = "场景[$sceneId]\n实现填充中（阶段 B 并行开发）"
-            setTextColor(Color.WHITE)
-            textSize = 16f
-            gravity = Gravity.CENTER
-            setBackgroundColor(0xFF100404.toInt())
+        when (sceneId) {
+            SceneIds.DARK_BAR -> DarkBarScene.create(context)
+            SceneIds.BUTTONS -> ButtonsScene.create(context)
+            SceneIds.LIQUID -> LiquidScene.create(context)
+            SceneIds.BIOMORPHIC -> BiomorphicScene.create(context)
+            else -> FallbackScene(context, sceneId)
         }
 }
+
+/** 未识别场景的兜底页（纯 View）。 */
+internal fun FallbackScene(context: Context, sceneId: String): View =
+    FrameLayout(context)

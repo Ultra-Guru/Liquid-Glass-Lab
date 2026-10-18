@@ -38,10 +38,12 @@ jobs:
 
       - name: 确保 SDK platform 37 / build-tools 就绪
         run: |
-          if [ ! -d "$ANDROID_HOME/platforms/android-37" ]; then
-            yes | sdkmanager "platforms;android-37" >/dev/null || true
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          [ -x "$SDKMANAGER" ] || SDKMANAGER="$(command -v sdkmanager || true)"
+          if [ -n "$SDKMANAGER" ] && [ ! -d "$ANDROID_HOME/platforms/android-37" ]; then
+            yes | "$SDKMANAGER" "platforms;android-37" >/dev/null || true
           fi
-          sdkmanager --list_installed | head -20
+          ls "$ANDROID_HOME/platforms" 2>/dev/null | tail -5 || true
 
       - name: assembleDebug
         run: ./gradlew :app:assembleDebug --stacktrace
@@ -86,8 +88,10 @@ jobs:
 
       - name: 确保 SDK platform 37 就绪
         run: |
-          if [ ! -d "$ANDROID_HOME/platforms/android-37" ]; then
-            yes | sdkmanager "platforms;android-37" >/dev/null || true
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          [ -x "$SDKMANAGER" ] || SDKMANAGER="$(command -v sdkmanager || true)"
+          if [ -n "$SDKMANAGER" ] && [ ! -d "$ANDROID_HOME/platforms/android-37" ]; then
+            yes | "$SDKMANAGER" "platforms;android-37" >/dev/null || true
           fi
 
       - name: assembleRelease（插件 APK）
