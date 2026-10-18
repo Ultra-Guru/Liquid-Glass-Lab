@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.ultraguru.liquidglass.GlassLabApp
 import com.ultraguru.liquidglass.data.Catalog
 import com.ultraguru.liquidglass.update.UpdateCenter
@@ -210,6 +211,30 @@ fun AboutScreen(onBack: () -> Unit) {
                         is UpdateCenter.AppState.Checking -> Text(st.message, style = MaterialTheme.typography.labelMedium)
                         UpdateCenter.AppState.Idle -> {}
                     }
+                }
+            }
+        }
+
+        item {
+            GlassCard(modifier = Modifier.fillMaxWidth(), cornerRadius = 20.dp, elevation = 10.dp) {
+                Column(Modifier.padding(16.dp)) {
+                    Text(
+                        "升级说明（老版本用户）",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = BrandRed
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "v0.1.1 起签名密钥统一为 meng4117222（CI 与本地构建指纹恒定，" +
+                            "此后版本可正常覆盖升级 / 增量更新）。\n" +
+                            "仍在使用 v0.1.0 的用户：签名与新版不同，系统会拒绝覆盖安装，" +
+                            "请先卸载旧版（数据仅是插件索引，重装后点「安装」即恢复），" +
+                            "再到 Release 下载最新 APK 安装 —— 仅此一次。",
+                        style = MaterialTheme.typography.bodySmall,
+                        lineHeight = 18.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }

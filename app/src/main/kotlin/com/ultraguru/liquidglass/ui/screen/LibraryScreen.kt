@@ -247,6 +247,14 @@ fun LibraryScreen(
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.error
                                 )
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    "可尝试：① 重试（会自动切换加速通道）\n" +
+                                        "② 设置 → 镜像源更换下载源\n" +
+                                        "③ 浏览器手动下载本插件 APK 并用系统安装器安装，回到本页会自动导入",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
                         else -> {

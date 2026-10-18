@@ -67,7 +67,6 @@ object PluginRegistry {
     private const val PREFS = "plugin_registry"
     private const val KEY_INDEX = "installed_index"
     private const val META_KEY = "com.ultraguru.liquidglass.PLUGIN_ENTRY"
-    private const val META_ID_KEY = "com.ultraguru.liquidglass.PLUGIN_ID"
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
@@ -322,11 +321,25 @@ object PluginRegistry {
 
     // ── 系统已装插件导入 ──────────────────────────────────────────
 
+    /** 五大插件的系统包名（与 AndroidManifest <queries> 声明一致）。 */
+    private val PLUGIN_PACKAGE_IDS = listOf(
+        "com.ultraguru.liquidglass.plugin.kyant0" to "kyant0",
+        "com.ultraguru.liquidglass.plugin.cloudy" to "cloudy",
+        "com.ultraguru.liquidglass.plugin.qmdeve" to "qmdeve",
+        "com.ultraguru.liquidglass.plugin.qwea0" to "qwea0",
+        "com.ultraguru.liquidglass.plugin.nadeem" to "nadeem"
+    )
+
     /**
      * 扫描系统已安装包，发现本项目的插件 APK（用户从 Release 手动安装的）则导入注册表。
      *
      * 场景：用户直接下载 Release 里的 plugin-*.apk 用系统安装器装了，
      * 但宿主内部索引无从知晓 —— 导入后立即显示为「已安装」并可用。
+     *
+     * v3 修复：
+     *  - Android 11+ 包可见性：宿主 Manifest 已声明 <queries>（5 个插件包名），
+     *    按包名定点 getPackageInfo（比泛扫 getInstalledPackages 更确定）。
+     *  - App onResume 自动重扫（GlassLabApp），装完插件回到 App 即生效。
      *
      * 完整性说明：系统安装器装包时已验签名；此处再把 APK 拷入私有目录交由
      * [installFromDownload] 解析落位（sha256 以拷贝件自算，信任链来自系统安装事实）。
@@ -335,17 +348,15 @@ object PluginRegistry {
     fun adoptSystemInstalledPlugins(): Int {
         if (!::appContext.isInitialized) return 0
         val pm = appContext.packageManager
-        val pkgs = runCatching { pm.getInstalledPackages(PackageManager.GET_META_DATA) }
-            .getOrDefault(emptyList())
         var adopted = 0
-        for (pi in pkgs) {
-            val appInfo = pi.applicationInfo ?: continue
-            if (appInfo.packageName == appContext.packageName) continue
-            val pluginId = appInfo.metaData?.getString(META_ID_KEY) ?: continue
+        for ((pkgName, pluginId) in PLUGIN_PACKAGE_IDS) {
+            val pi = runCatching {
+                pm.getPackageInfo(pkgName, PackageManager.GET_META_DATA)
+            }.getOrNull() ?: continue
             val sysCode = pi.longVersionCode.toInt()
             val local = _installed.value[pluginId]
             if (local != null && local.versionCode >= sysCode) continue
-            val src = appInfo.sourceDir?.let { File(it) }?.takeIf { it.isFile } ?: continue
+            val src = pi.applicationInfo?.sourceDir?.let { File(it) }?.takeIf { it.isFile } ?: continue
             val tmp = File(downloadsDir(), "plugin-$pluginId-sys.apk")
             val copied = runCatching { src.copyTo(tmp, overwrite = true) }.isSuccess
             if (!copied) {

@@ -67,6 +67,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     var appUpdateMsg by remember { mutableStateOf<String?>(null) }
     var pluginUpdates by remember { mutableStateOf<Map<String, com.ultraguru.liquidglass.update.PluginRelease>>(emptyMap()) }
     var mirrorDraft by remember(settings.mirrorBase) { mutableStateOf(settings.mirrorBase) }
+    var adoptMsg by remember { mutableStateOf<String?>(null) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -259,6 +260,25 @@ fun SettingsScreen(onBack: () -> Unit) {
         // ── 插件管理 ──
         item {
             Section("插件管理（${installed.size}/5）") {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedButton(onClick = {
+                        adoptMsg = "扫描中…"
+                        GlassLabApp.get().adoptSystemPluginsNow { n ->
+                            scope.launch { adoptMsg = if (n > 0) "已导入 $n 个系统已装插件" else "未发现新的系统已装插件" }
+                        }
+                    }) { Text("导入系统已装插件") }
+                }
+                if (adoptMsg != null) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(adoptMsg!!, style = MaterialTheme.typography.bodySmall)
+                }
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "从 Release 手动下载并系统安装的 plugin-*.apk，点上面的按钮（或回到 App 时自动）导入。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
                 if (installed.isEmpty()) {
                     Text(
                         "尚未安装任何插件 —— 回到列表逐库点「安装插件」",

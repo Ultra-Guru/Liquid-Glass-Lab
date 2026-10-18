@@ -6,6 +6,17 @@
     <!-- App 自身增量更新：vcdiff 合成新 APK 后拉起系统安装器（Android 8+ 需要） -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
+    <!-- Android 11+ 包可见性：用户用系统安装器 sideload 的插件 APK（plugin-*.apk）
+         必须在此声明包名，宿主的 adoptSystemInstalledPlugins() 才能扫到并导入注册表；
+         否则 getInstalledPackages() 被系统过滤，装完仍显示「未安装」。 -->
+    <queries>
+        <package android:name="com.ultraguru.liquidglass.plugin.kyant0" />
+        <package android:name="com.ultraguru.liquidglass.plugin.cloudy" />
+        <package android:name="com.ultraguru.liquidglass.plugin.qmdeve" />
+        <package android:name="com.ultraguru.liquidglass.plugin.qwea0" />
+        <package android:name="com.ultraguru.liquidglass.plugin.nadeem" />
+    </queries>
+
     <application
         android:name=".GlassLabApp"
         android:allowBackup="true"
