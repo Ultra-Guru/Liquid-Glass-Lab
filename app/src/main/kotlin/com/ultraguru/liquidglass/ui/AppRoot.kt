@@ -21,6 +21,7 @@ import com.ultraguru.liquidglass.ui.screen.LibraryScreen
 import com.ultraguru.liquidglass.ui.screen.MainListScreen
 import com.ultraguru.liquidglass.ui.screen.SceneHostScreen
 import com.ultraguru.liquidglass.ui.screen.SettingsScreen
+import com.ultraguru.liquidglass.ui.theme.GlassLabTheme
 
 /** 手工导航栈（无 navigation-compose 依赖，路径完全可控）。 */
 sealed interface Screen {
