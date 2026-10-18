@@ -2,14 +2,5 @@
   "schema": "liquid-glass-lab.patches.v1",
   "tag": "v0.1.0",
   "versionCode": 3,
-  "bases": [
-    {
-      "url": "https://github.com/Ultra-Guru/Liquid-Glass-Lab/releases/download/v0.1.0/patch_v2_to_vv0.1.0.vcdiff",
-      "path": "releases/download/v0.1.0/patch_v2_to_vv0.1.0.vcdiff",
-      "sizeBytes": 12821936,
-      "sha256": "ada03849f3ef285cf93e7c6c23d16b11e82dce27188840fde5bd7bba46c9f5a3",
-      "from": 2,
-      "apkUrl": "https://github.com/Ultra-Guru/Liquid-Glass-Lab/releases/download/v0.1.0/liquidglass-v0.1.0-vc2.apk"
-    }
-  ]
+  "bases": []
 }
