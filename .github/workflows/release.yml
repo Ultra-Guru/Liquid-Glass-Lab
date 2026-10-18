@@ -158,10 +158,15 @@ jobs:
               echo "↷ 基底 v$BASE 无历史 APK，跳过"; continue
             fi
             echo "→ 基底 v$BASE：$BASE_URL"
-            curl -sL "$BASE_URL" -o /tmp/base.apk
-            PATCH="patch_v${BASE}_to_v${TAG}.vcdiff"
-            xdelta3 -e -f -S lzma -s /tmp/base.apk "$NEW_APK" "patches-out/$PATCH" \
-              || xdelta3 -e -f -s /tmp/base.apk "$NEW_APK" "patches-out/$PATCH"
+            # -f：HTTP 4xx/5xx 直接失败；基底必须是真 APK（魔数 PK）—— 防止把 404 HTML 当基底生成垃圾补丁
+            if ! curl -fsSL "$BASE_URL" -o /tmp/base.apk \
+               || [ "$(head -c2 /tmp/base.apk 2>/dev/null)" != "PK" ]; then
+              echo "↷ 基底 v$BASE 下载失败或非 APK（URL 失效？），跳过"; continue
+            fi
+            PATCH="patch_v${BASE}_to_${TAG}.vcdiff"
+            if ! xdelta3 -e -f -S lzma -s /tmp/base.apk "$NEW_APK" "patches-out/$PATCH"; then
+              xdelta3 -e -f -s /tmp/base.apk "$NEW_APK" "patches-out/$PATCH"
+            fi
             rm -f /tmp/base.apk
           done
           ls -la patches-out/ || true
@@ -184,7 +189,10 @@ jobs:
               echo "↷ 插件 $m 无上一版 APK，跳过补丁"; continue
             fi
             echo "→ 插件 $m 上一版：$OLD_URL"
-            curl -sL "$OLD_URL" -o /tmp/old-plugin.apk
+            if ! curl -fsSL "$OLD_URL" -o /tmp/old-plugin.apk \
+               || [ "$(head -c2 /tmp/old-plugin.apk 2>/dev/null)" != "PK" ]; then
+              echo "↷ 插件 $m 上一版下载失败或非 APK，跳过补丁"; continue
+            fi
             NEW="dist/plugin-${m}-v${{ steps.tag.outputs.version }}-vc${{ steps.ver.outputs.code }}.apk"
             PREV_CODE=$(python3 - << EOF
           import json
@@ -194,9 +202,10 @@ jobs:
                   print(p['versionCode']); break
           EOF
             )
-            PATCH="plugin-${m}_v${PREV_CODE}_to_v${TAG}.vcdiff"
-            xdelta3 -e -f -S lzma -s /tmp/old-plugin.apk "$NEW" "patches-out/$PATCH" \
-              || xdelta3 -e -f -s /tmp/old-plugin.apk "$NEW" "patches-out/$PATCH"
+            PATCH="plugin-${m}_v${PREV_CODE}_to_${TAG}.vcdiff"
+            if ! xdelta3 -e -f -S lzma -s /tmp/old-plugin.apk "$NEW" "patches-out/$PATCH"; then
+              xdelta3 -e -f -s /tmp/old-plugin.apk "$NEW" "patches-out/$PATCH"
+            fi
             rm -f /tmp/old-plugin.apk
           done
 
