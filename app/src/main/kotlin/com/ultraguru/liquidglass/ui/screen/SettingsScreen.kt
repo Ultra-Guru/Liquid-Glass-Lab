@@ -1,6 +1,12 @@
 package com.ultraguru.liquidglass.ui.screen
 
-import androidx.compose.foundation.background
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,14 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -25,7 +23,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,6 +44,7 @@ import com.ultraguru.liquidglass.plugin.InstallState
 import com.ultraguru.liquidglass.plugin.PluginRegistry
 import com.ultraguru.liquidglass.update.UpdateCenter
 import com.ultraguru.liquidglass.update.AppVersionManifest
+import com.ultraguru.liquidglass.ui.components.GlassCard
 import com.ultraguru.liquidglass.ui.theme.BrandRed
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -71,9 +69,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     var mirrorDraft by remember(settings.mirrorBase) { mutableStateOf(settings.mirrorBase) }
 
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(
             start = 16.dp, end = 16.dp, top = 48.dp, bottom = 32.dp
         ),
@@ -124,6 +120,12 @@ fun SettingsScreen(onBack: () -> Unit) {
                     checked = settings.silentUpdateCheck,
                     onChange = { v -> app.settings.update { it.copy(silentUpdateCheck = v) } }
                 )
+                SettingSwitch(
+                    title = "网络加速",
+                    subtitle = "GitHub 直连失败时自动经公共加速镜像重试（sha256 校验兑底完整性）",
+                    checked = settings.networkBoost,
+                    onChange = { v -> app.settings.update { it.copy(networkBoost = v) } }
+                )
                 Spacer(Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -135,7 +137,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                                 appUpdateBusy = true
                                 appUpdateMsg = null
                                 runCatching {
-                                    UpdateCenter.peekAppUpdate(hostVersionCode(), settings.mirrorBase)
+                                    UpdateCenter.peekAppUpdate(hostVersionCode(), settings.mirrorBase, settings.networkBoost)
                                 }.onSuccess { m ->
                                     appUpdate = m
                                     appUpdateMsg = if (m == null) "已是最新版本" else "发现新版本 v${m.versionName}"
@@ -154,7 +156,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                     OutlinedButton(
                         onClick = {
                             scope.launch {
-                                runCatching { UpdateCenter.findPluginUpdates(settings.mirrorBase) }
+                                runCatching { UpdateCenter.findPluginUpdates(settings.mirrorBase, settings.networkBoost) }
                                     .onSuccess { pluginUpdates = it }
                             }
                         }
@@ -192,7 +194,8 @@ fun SettingsScreen(onBack: () -> Unit) {
                                             pluginId = id,
                                             mirrorBase = settings.mirrorBase,
                                             hostVersionCode = hostVersionCode(),
-                                            onProgress = { PluginRegistry.setInstallState(id, it) }
+                                            onProgress = { PluginRegistry.setInstallState(id, it) },
+                                            boost = settings.networkBoost
                                         )
                                     }
                                 }, enabled = st !is InstallState.Downloading && st !is InstallState.Installing) {
@@ -298,10 +301,10 @@ fun SettingsScreen(onBack: () -> Unit) {
 
 @Composable
 private fun Section(title: String, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
-    Surface(
+    GlassCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surface
+        cornerRadius = 24.dp,
+        elevation = 12.dp
     ) {
         Column(Modifier.padding(18.dp)) {
             Text(

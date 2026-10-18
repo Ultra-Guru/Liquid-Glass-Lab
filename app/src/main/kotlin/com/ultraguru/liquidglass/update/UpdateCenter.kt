@@ -41,25 +41,29 @@ object UpdateCenter {
 
     // ── 清单获取 ──────────────────────────────────────────────────────
 
-    suspend fun fetchAppManifest(mirrorBase: String): AppVersionManifest = withContext(Dispatchers.IO) {
-        json.decodeFromString(Downloader.fetchText(mirrorBase.trimEnd('/') + "/version.json"))
-    }
+    suspend fun fetchAppManifest(mirrorBase: String, boost: Boolean = true): AppVersionManifest =
+        withContext(Dispatchers.IO) {
+            json.decodeFromString(Downloader.fetchText(mirrorBase.trimEnd('/') + "/version.json", boost))
+        }
 
-    suspend fun fetchPluginsManifest(mirrorBase: String): PluginsManifest = withContext(Dispatchers.IO) {
-        json.decodeFromString(Downloader.fetchText(mirrorBase.trimEnd('/') + "/plugins.json"))
-    }
+    suspend fun fetchPluginsManifest(mirrorBase: String, boost: Boolean = true): PluginsManifest =
+        withContext(Dispatchers.IO) {
+            json.decodeFromString(Downloader.fetchText(mirrorBase.trimEnd('/') + "/plugins.json", boost))
+        }
 
-    suspend fun fetchPatchesIndex(mirrorBase: String): PatchesIndex? = withContext(Dispatchers.IO) {
-        runCatching {
-            json.decodeFromString<PatchesIndex>(Downloader.fetchText(mirrorBase.trimEnd('/') + "/patches.json"))
-        }.getOrNull()
-    }
+    suspend fun fetchPatchesIndex(mirrorBase: String, boost: Boolean = true): PatchesIndex? =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                json.decodeFromString<PatchesIndex>(Downloader.fetchText(mirrorBase.trimEnd('/') + "/patches.json", boost))
+            }.getOrNull()
+        }
 
-    suspend fun fetchChangelog(mirrorBase: String): List<ChangelogEntry> = withContext(Dispatchers.IO) {
-        runCatching {
-            json.decodeFromString<List<ChangelogEntry>>(Downloader.fetchText(mirrorBase.trimEnd('/') + "/changelog.json"))
-        }.getOrDefault(emptyList())
-    }
+    suspend fun fetchChangelog(mirrorBase: String, boost: Boolean = true): List<ChangelogEntry> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                json.decodeFromString<List<ChangelogEntry>>(Downloader.fetchText(mirrorBase.trimEnd('/') + "/changelog.json", boost))
+            }.getOrDefault(emptyList())
+        }
 
     // ── App 更新链 ───────────────────────────────────────────────────
 
@@ -69,9 +73,10 @@ object UpdateCenter {
      */
     suspend fun peekAppUpdate(
         currentVersionCode: Int,
-        mirrorBase: String
+        mirrorBase: String,
+        boost: Boolean = true
     ): AppVersionManifest? = withContext(Dispatchers.IO) {
-        val manifest = fetchAppManifest(mirrorBase)
+        val manifest = fetchAppManifest(mirrorBase, boost)
         if (manifest.versionCode > currentVersionCode) manifest else null
     }
 
@@ -83,9 +88,10 @@ object UpdateCenter {
         context: Context,
         currentVersionCode: Int,
         mirrorBase: String,
-        onState: (AppState) -> Unit
+        onState: (AppState) -> Unit,
+        boost: Boolean = true
     ): File = withContext(Dispatchers.IO) {
-        val manifest = fetchAppManifest(mirrorBase)
+        val manifest = fetchAppManifest(mirrorBase, boost)
         if (manifest.versionCode <= currentVersionCode) {
             onState(AppState.UpToDate(manifest.versionName))
             throw IllegalStateException("already up to date")
@@ -156,9 +162,9 @@ object UpdateCenter {
      * 检查全部插件更新（不下载）。
      * 返回 (插件id → PluginRelease) 中 versionCode 高于本机的条目。
      */
-    suspend fun findPluginUpdates(mirrorBase: String): Map<String, PluginRelease> =
+    suspend fun findPluginUpdates(mirrorBase: String, boost: Boolean = true): Map<String, PluginRelease> =
         withContext(Dispatchers.IO) {
-            val manifest = fetchPluginsManifest(mirrorBase)
+            val manifest = fetchPluginsManifest(mirrorBase, boost)
             val installed = PluginRegistry.installed.value
             manifest.plugins.filter { rel ->
                 val local = installed[rel.id]
@@ -175,10 +181,11 @@ object UpdateCenter {
         pluginId: String,
         mirrorBase: String,
         hostVersionCode: Int,
-        onProgress: (InstallState) -> Unit
+        onProgress: (InstallState) -> Unit,
+        boost: Boolean = true
     ): String? = withContext(Dispatchers.IO) {
         try {
-            val manifest = fetchPluginsManifest(mirrorBase)
+            val manifest = fetchPluginsManifest(mirrorBase, boost)
             val rel = manifest.byId(pluginId) ?: return@withContext "plugins.json 中不存在 [$pluginId]"
             if (rel.versionCode <= (PluginRegistry.installed.value[pluginId]?.versionCode ?: 0)) {
                 return@withContext "已是最新版本"
@@ -207,10 +214,12 @@ object UpdateCenter {
                 patchFile.delete()
                 tempFull
             } else {
+                val assetUrl = apkRef.resolve(mirrorBase)
+                PluginRegistry.diag("[$pluginId] 开始下载：$assetUrl")
                 onProgress(InstallState.Downloading(0))
-                Downloader.download(apkRef.resolve(mirrorBase), tempFull) { p ->
+                Downloader.download(assetUrl, tempFull, { p ->
                     onProgress(InstallState.Downloading(p))
-                }
+                }, boost) { ch -> PluginRegistry.diag("[$pluginId] APK 下载通道：$ch") }
                 tempFull
             }
 

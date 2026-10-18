@@ -1,5 +1,6 @@
 package com.ultraguru.liquidglass.update
 
+import com.ultraguru.liquidglass.data.SettingsStore
 import kotlinx.serialization.Serializable
 
 /**
@@ -15,10 +16,15 @@ import kotlinx.serialization.Serializable
  *
  * 由 release.yml 在发版时生成并提交回 main；App「设置 → 检查更新」读取。
  *
- * ## 镜像语义
+ * ## 镜像语义（v2：修复 Release 资产 404）
  * [AssetRef.url] 是 GitHub 规范绝对地址；[AssetRef.path] 是相对仓库的路径。
- * 默认（官方源）直接用 url；自定义镜像时优先 path 反射到镜像基地址 ——
- * 镜像只需镜像 `raw 清单 + Release 资产` 两个面即可完整工作。
+ *
+ * 关键区分：**清单**（json）住在 raw.githubusercontent（git 内容），
+ * 而**资产**（APK / vcdiff）只住在 github.com 的 Release 下载端点 ——
+ * raw 源不镜像 Release 资产，直接拼接必然 404（v0.1.0 安装失败的根因）。
+ *
+ * 因此：默认（官方 raw 源）时资产回落到 [SettingsStore.GITHUB_BASE]；
+ * 自定义镜像时视为「全镜像」（清单+资产同源）按镜像基地址拼接。
  */
 
 @Serializable
@@ -28,11 +34,32 @@ data class AssetRef(
     val sizeBytes: Long = 0,
     val sha256: String
 ) {
-    /** 依镜像设置解析实际下载地址。 */
+    /**
+     * 依镜像设置解析实际下载地址。
+     *
+     * 官方 raw 清单源 → 资产回落 github.com 规范端点（raw 不托管 Release 资产）；
+     * 自定义镜像 → 全镜像按基地址拼接；无 path → 用规范绝对 url。
+     */
     fun resolve(mirrorBase: String): String {
         val p = path?.takeIf { it.isNotBlank() } ?: return url
-        if (mirrorBase.isBlank()) return url
-        return mirrorBase.trimEnd('/') + "/" + p.trimStart('/')
+        val base = assetBaseFor(mirrorBase)
+        if (base.isBlank()) return url
+        return base.trimEnd('/') + "/" + p.trimStart('/')
+    }
+
+    companion object {
+        /** 清单基地址 → 资产基地址（公开：诊断页展示实际下载源用）。 */
+        fun assetBaseFor(mirrorBase: String): String {
+            val m = mirrorBase.trim().trimEnd('/')
+            if (m.isEmpty()) return ""
+            return if (m == SettingsStore.DEFAULT_MIRROR.trimEnd('/')) {
+                // 官方 raw 清单源：资产一律走 github.com 规范 Release 端点
+                SettingsStore.GITHUB_BASE.trimEnd('/')
+            } else {
+                // 自定义镜像：约定为全镜像（清单与资产同源）
+                m
+            }
+        }
     }
 }
 

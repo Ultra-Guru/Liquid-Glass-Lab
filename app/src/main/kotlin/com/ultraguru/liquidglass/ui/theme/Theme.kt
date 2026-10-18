@@ -8,6 +8,8 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
 import com.ultraguru.liquidglass.data.ThemeMode
 
@@ -43,6 +45,8 @@ private val LightScheme = lightColorScheme(
     outline = LightOutline
 )
 
+/** 当前是否深色主题（玻璃组件取色依据；动态取色下比亮度探测更可靠）。 */
+val LocalGlassDarkTheme = staticCompositionLocalOf { true }
 
 @Composable
 fun GlassLabTheme(
@@ -62,8 +66,10 @@ fun GlassLabTheme(
         dark -> DarkScheme
         else -> LightScheme
     }
-    MaterialTheme(
-        colorScheme = scheme,
-        content = content
-    )
+    CompositionLocalProvider(LocalGlassDarkTheme provides dark) {
+        MaterialTheme(
+            colorScheme = scheme,
+            content = content
+        )
+    }
 }

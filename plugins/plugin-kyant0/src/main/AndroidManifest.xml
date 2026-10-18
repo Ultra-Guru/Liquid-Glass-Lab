@@ -8,5 +8,9 @@
         <meta-data
             android:name="com.ultraguru.liquidglass.PLUGIN_ENTRY"
             android:value="com.ultraguru.liquidglass.plugin.kyant0.Kyant0Plugin" />
+
+        <meta-data
+            android:name="com.ultraguru.liquidglass.PLUGIN_ID"
+            android:value="kyant0" />
     </application>
 </manifest>

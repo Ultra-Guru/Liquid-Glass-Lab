@@ -8,5 +8,9 @@
         <meta-data
             android:name="com.ultraguru.liquidglass.PLUGIN_ENTRY"
             android:value="com.ultraguru.liquidglass.plugin.cloudy.CloudyPlugin" />
+
+        <meta-data
+            android:name="com.ultraguru.liquidglass.PLUGIN_ID"
+            android:value="cloudy" />
     </application>
 </manifest>

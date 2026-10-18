@@ -67,6 +67,7 @@ object PluginRegistry {
     private const val PREFS = "plugin_registry"
     private const val KEY_INDEX = "installed_index"
     private const val META_KEY = "com.ultraguru.liquidglass.PLUGIN_ENTRY"
+    private const val META_ID_KEY = "com.ultraguru.liquidglass.PLUGIN_ID"
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
@@ -317,6 +318,49 @@ object PluginRegistry {
             }
         }
         return md.digest().joinToString("") { b -> "%02x".format(b) }
+    }
+
+    // ── 系统已装插件导入 ──────────────────────────────────────────
+
+    /**
+     * 扫描系统已安装包，发现本项目的插件 APK（用户从 Release 手动安装的）则导入注册表。
+     *
+     * 场景：用户直接下载 Release 里的 plugin-*.apk 用系统安装器装了，
+     * 但宿主内部索引无从知晓 —— 导入后立即显示为「已安装」并可用。
+     *
+     * 完整性说明：系统安装器装包时已验签名；此处再把 APK 拷入私有目录交由
+     * [installFromDownload] 解析落位（sha256 以拷贝件自算，信任链来自系统安装事实）。
+     * 返回本次新导入的插件数。
+     */
+    fun adoptSystemInstalledPlugins(): Int {
+        if (!::appContext.isInitialized) return 0
+        val pm = appContext.packageManager
+        val pkgs = runCatching { pm.getInstalledPackages(PackageManager.GET_META_DATA) }
+            .getOrDefault(emptyList())
+        var adopted = 0
+        for (pi in pkgs) {
+            val appInfo = pi.applicationInfo ?: continue
+            if (appInfo.packageName == appContext.packageName) continue
+            val pluginId = appInfo.metaData?.getString(META_ID_KEY) ?: continue
+            val sysCode = pi.longVersionCode.toInt()
+            val local = _installed.value[pluginId]
+            if (local != null && local.versionCode >= sysCode) continue
+            val src = appInfo.sourceDir?.let { File(it) }?.takeIf { it.isFile } ?: continue
+            val tmp = File(downloadsDir(), "plugin-$pluginId-sys.apk")
+            val copied = runCatching { src.copyTo(tmp, overwrite = true) }.isSuccess
+            if (!copied) {
+                diag("插件 [$pluginId] 系统导入失败：无法读取 $src")
+                continue
+            }
+            val err = installFromDownload(pluginId, tmp, sha256Of(tmp))
+            if (err == null) {
+                adopted++
+                diag("插件 [$pluginId] 已从系统安装包导入（v${pi.versionName ?: sysCode}）")
+            } else {
+                diag("插件 [$pluginId] 系统导入失败：$err")
+            }
+        }
+        return adopted
     }
 
     fun isInstalled(id: String): Boolean = _installed.value.containsKey(id)

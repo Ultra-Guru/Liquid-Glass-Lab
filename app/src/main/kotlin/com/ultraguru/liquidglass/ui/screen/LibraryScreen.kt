@@ -18,8 +18,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -33,7 +34,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -54,6 +54,7 @@ import com.ultraguru.liquidglass.data.SettingsStore
 import com.ultraguru.liquidglass.plugin.InstallState
 import com.ultraguru.liquidglass.plugin.PluginRegistry
 import com.ultraguru.liquidglass.update.UpdateCenter
+import com.ultraguru.liquidglass.ui.components.GlassCard
 import com.ultraguru.liquidglass.ui.components.StarsBadge
 import com.ultraguru.liquidglass.ui.components.StatusChip
 import com.ultraguru.liquidglass.ui.theme.BrandRed
@@ -64,7 +65,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * 库详情页：未安装 → 显示「安装」；安装完成 → 自动展示四大演示场景。
+ * 库详情页：未安装 → 显示「安装」；安装完成 → 自动展示四大演示场景 + 「启动」直达按钮。
+ *
+ * v2 修复链：
+ *  - 安装走 UpdateCenter（资产 URL 已回落 github.com 规范源 + 加速通道）
+ *  - 进入页面即尝试导入系统已装插件（用户手动 sideload 的 plugin-*.apk）
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,6 +86,14 @@ fun LibraryScreen(
     var showUninstallConfirm by remember { mutableStateOf(false) }
     var loadError by remember { mutableStateOf<String?>(null) }
 
+    // ① 系统已装插件导入（用户从 Release 手动安装的 plugin APK 立即识别）
+    // ② 场景列表刷新（安装完成 / 导入成功后 installed 变化驱动 remember 重算）
+    LaunchedEffect(entry.id) {
+        withContext(Dispatchers.IO) {
+            runCatching { PluginRegistry.adoptSystemInstalledPlugins() }
+        }
+    }
+
     val info = installed[entry.id]
     val state = installStates[entry.id]
 
@@ -93,10 +106,6 @@ fun LibraryScreen(
         } else null
     }
 
-    LaunchedEffect(entry.id) {
-        PluginRegistry.setInstallState(entry.id, PluginRegistry.installStates.value[entry.id] ?: InstallState.Idle)
-    }
-
     fun startInstall() {
         scope.launch {
             val settings = currentSettings()
@@ -105,7 +114,8 @@ fun LibraryScreen(
                 pluginId = entry.id,
                 mirrorBase = settings.mirrorBase,
                 hostVersionCode = hostVersionCode(),
-                onProgress = { PluginRegistry.setInstallState(entry.id, it) }
+                onProgress = { PluginRegistry.setInstallState(entry.id, it) },
+                boost = settings.networkBoost
             )
             if (err != null) {
                 PluginRegistry.setInstallState(entry.id, InstallState.Failed(err))
@@ -114,9 +124,7 @@ fun LibraryScreen(
     }
 
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(
             start = 16.dp, end = 16.dp, top = 48.dp, bottom = 32.dp
         ),
@@ -138,12 +146,8 @@ fun LibraryScreen(
         }
 
         item {
-            // 头部信息
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surface
-            ) {
+            // 头部信息（玻璃卡）
+            GlassCard(modifier = Modifier.fillMaxWidth(), cornerRadius = 24.dp) {
                 Column(Modifier.padding(20.dp)) {
                     Text(entry.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(4.dp))
@@ -181,11 +185,11 @@ fun LibraryScreen(
         }
 
         item {
-            // 安装 / 状态卡
-            Surface(
+            // 安装 / 状态卡（玻璃卡）
+            GlassCard(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant
+                cornerRadius = 24.dp,
+                elevation = 16.dp
             ) {
                 Column(Modifier.padding(20.dp)) {
                     when {
@@ -267,6 +271,22 @@ fun LibraryScreen(
                                 )
                             }
                             Spacer(Modifier.height(12.dp))
+                            // 启动直达按钮：装完即可一键进入演示 UI
+                            if (!pluginScenes.isNullOrEmpty()) {
+                                Button(
+                                    onClick = {
+                                        val first = pluginScenes.first()
+                                        onOpenScene(entry.id, first.id, first.title)
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.buttonColors(containerColor = BrandRed)
+                                ) {
+                                    Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(20.dp))
+                                    Spacer(Modifier.size(8.dp))
+                                    Text("启动演示")
+                                }
+                                Spacer(Modifier.height(10.dp))
+                            }
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 OutlinedButton(onClick = { startInstall() }) {
                                     Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -297,10 +317,10 @@ fun LibraryScreen(
             }
             items(pluginScenes.size) { idx ->
                 val scene = pluginScenes[idx]
-                Surface(
-                    onClick = { onOpenScene(entry.id, scene.id, scene.title) },
-                    shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.surface
+                GlassCard(
+                    cornerRadius = 20.dp,
+                    elevation = 10.dp,
+                    onClick = { onOpenScene(entry.id, scene.id, scene.title) }
                 ) {
                     ListItem(
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
@@ -308,7 +328,7 @@ fun LibraryScreen(
                             Box(
                                 Modifier
                                     .size(38.dp)
-                                    .background(BrandRed.copy(alpha = 0.15f), RoundedCornerShape(12.dp)),
+                                    .background(BrandRed.copy(alpha = 0.18f), RoundedCornerShape(12.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
@@ -326,21 +346,20 @@ fun LibraryScreen(
             }
         } else if (info != null && loadError != null) {
             item {
-                Surface(
+                GlassCard(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.errorContainer
+                    cornerRadius = 20.dp
                 ) {
                     Column(Modifier.padding(16.dp)) {
                         Text(
                             "插件加载失败",
                             style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onErrorContainer
+                            color = MaterialTheme.colorScheme.error
                         )
                         Text(
                             loadError ?: "",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onErrorContainer
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -362,10 +381,7 @@ fun LibraryScreen(
                     "液体" to "Liquid · 可拖拽弹性液滴",
                     "生物拟态" to "Biomorphic · 有机形态呼吸群落"
                 )
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f)
-                ) {
+                GlassCard(cornerRadius = 20.dp, elevation = 8.dp) {
                     ListItem(
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                         headlineContent = { Text(titles[idx].first, fontWeight = FontWeight.SemiBold) },

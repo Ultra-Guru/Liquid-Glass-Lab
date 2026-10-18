@@ -28,7 +28,9 @@ class SettingsStore(context: Context) {
         /** 严格模式：插件 APK 签名必须与宿主一致（自编译 debug 包会警告降级）。 */
         val verifyPluginSignature: Boolean = true,
         /** 启动时静默检查更新。 */
-        val silentUpdateCheck: Boolean = true
+        val silentUpdateCheck: Boolean = true,
+        /** 网络加速：GitHub 直连失败时自动经公共加速镜像重试（sha256 校验兑底完整性）。 */
+        val networkBoost: Boolean = true
     ) {
         fun isCustomMirror(): Boolean = mirrorBase.trimEnd('/') != DEFAULT_MIRROR
     }
@@ -41,6 +43,7 @@ class SettingsStore(context: Context) {
             .putString("mirrorBase", next.mirrorBase)
             .putBoolean("verifyPluginSignature", next.verifyPluginSignature)
             .putBoolean("silentUpdateCheck", next.silentUpdateCheck)
+            .putBoolean("networkBoost", next.networkBoost)
             .apply()
         _state.value = next
     }
@@ -52,7 +55,8 @@ class SettingsStore(context: Context) {
         dynamicColor = prefs.getBoolean("dynamicColor", true),
         mirrorBase = prefs.getString("mirrorBase", DEFAULT_MIRROR)?.takeIf { it.isNotBlank() } ?: DEFAULT_MIRROR,
         verifyPluginSignature = prefs.getBoolean("verifyPluginSignature", true),
-        silentUpdateCheck = prefs.getBoolean("silentUpdateCheck", true)
+        silentUpdateCheck = prefs.getBoolean("silentUpdateCheck", true),
+        networkBoost = prefs.getBoolean("networkBoost", true)
     )
 
     companion object {

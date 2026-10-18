@@ -8,5 +8,9 @@
         <meta-data
             android:name="com.ultraguru.liquidglass.PLUGIN_ENTRY"
             android:value="com.ultraguru.liquidglass.plugin.nadeem.NadeemPlugin" />
+
+        <meta-data
+            android:name="com.ultraguru.liquidglass.PLUGIN_ID"
+            android:value="nadeem" />
     </application>
 </manifest>

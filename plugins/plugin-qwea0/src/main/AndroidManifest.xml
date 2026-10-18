@@ -8,5 +8,9 @@
         <meta-data
             android:name="com.ultraguru.liquidglass.PLUGIN_ENTRY"
             android:value="com.ultraguru.liquidglass.plugin.qwea0.Qwea0Plugin" />
+
+        <meta-data
+            android:name="com.ultraguru.liquidglass.PLUGIN_ID"
+            android:value="qwea0" />
     </application>
 </manifest>

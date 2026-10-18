@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
@@ -25,11 +24,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,6 +44,7 @@ import com.ultraguru.liquidglass.GlassLabApp
 import com.ultraguru.liquidglass.data.Catalog
 import com.ultraguru.liquidglass.update.UpdateCenter
 import com.ultraguru.liquidglass.update.ChangelogEntry
+import com.ultraguru.liquidglass.ui.components.GlassCard
 import com.ultraguru.liquidglass.ui.theme.BrandRed
 import com.ultraguru.liquidglass.ui.theme.BrandRedDeep
 import kotlinx.coroutines.CoroutineScope
@@ -66,7 +66,7 @@ fun AboutScreen(onBack: () -> Unit) {
     var updateState by remember { mutableStateOf<UpdateCenter.AppState>(UpdateCenter.AppState.Idle) }
     var readyApk by remember { mutableStateOf<java.io.File?>(null) }
 
-    val settings = app.settings.state.value
+    val settings by app.settings.state.collectAsState()
 
     val versionInfo = remember {
         runCatching {
@@ -80,16 +80,14 @@ fun AboutScreen(onBack: () -> Unit) {
     LaunchedEffect(Unit) {
         scope.launch {
             runCatching {
-                UpdateCenter.fetchChangelog(settings.mirrorBase)
+                UpdateCenter.fetchChangelog(settings.mirrorBase, settings.networkBoost)
             }.onSuccess { changelog = it }
                 .onFailure { changelogMsg = "更新日志加载失败：${it.message}" }
         }
     }
 
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(
             start = 16.dp, end = 16.dp, top = 48.dp, bottom = 32.dp
         ),
@@ -103,11 +101,7 @@ fun AboutScreen(onBack: () -> Unit) {
         }
 
         item {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surface
-            ) {
+            GlassCard(modifier = Modifier.fillMaxWidth(), cornerRadius = 24.dp, elevation = 16.dp) {
                 Column(Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     androidx.compose.foundation.layout.Box(
                         modifier = Modifier
@@ -144,12 +138,13 @@ fun AboutScreen(onBack: () -> Unit) {
                                             context = context,
                                             currentVersionCode = versionInfo.second,
                                             mirrorBase = settings.mirrorBase,
-                                            onState = { updateState = it }
+                                            onState = { updateState = it },
+                                            boost = settings.networkBoost
                                         )
                                     }.onSuccess { apk ->
                                         readyApk = apk
                                         updateState = UpdateCenter.AppState.ReadyToInstall(
-                                            apk, UpdateCenter.fetchAppManifest(settings.mirrorBase),
+                                            apk, UpdateCenter.fetchAppManifest(settings.mirrorBase, settings.networkBoost),
                                             viaPatch = true
                                         )
                                         UpdateCenter.launchApkInstaller(context, apk)
@@ -229,10 +224,7 @@ fun AboutScreen(onBack: () -> Unit) {
         }
         items(Catalog.libraries.size) { i ->
             val e = Catalog.libraries[i]
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = MaterialTheme.colorScheme.surface
-            ) {
+            GlassCard(cornerRadius = 20.dp, elevation = 10.dp) {
                 ListItem(
                     overlineContent = { Text("${e.stars}★ · ${e.license}", style = MaterialTheme.typography.labelSmall) },
                     headlineContent = { Text(e.title, fontWeight = FontWeight.SemiBold) },
@@ -252,11 +244,7 @@ fun AboutScreen(onBack: () -> Unit) {
         }
 
         item {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = MaterialTheme.colorScheme.surface
-            ) {
+            GlassCard(modifier = Modifier.fillMaxWidth(), cornerRadius = 20.dp, elevation = 10.dp) {
                 Column(Modifier.padding(16.dp)) {
                     Text("许可", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(4.dp))
@@ -290,10 +278,7 @@ fun AboutScreen(onBack: () -> Unit) {
         }
         items(changelog.size) { i ->
             val c = changelog[i]
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = MaterialTheme.colorScheme.surface
-            ) {
+            GlassCard(cornerRadius = 20.dp, elevation = 10.dp) {
                 Column(Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(

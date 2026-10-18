@@ -6,16 +6,17 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Surface
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import com.ultraguru.liquidglass.GlassLabApp
+import com.ultraguru.liquidglass.ui.components.AuroraBackground
 import com.ultraguru.liquidglass.ui.screen.AboutScreen
 import com.ultraguru.liquidglass.ui.screen.LibraryScreen
 import com.ultraguru.liquidglass.ui.screen.MainListScreen
@@ -36,7 +37,9 @@ sealed interface Screen {
 fun AppRoot() {
     val settings by GlassLabApp.get().settings.state.collectAsState()
     GlassLabTheme(themeMode = settings.themeMode, dynamicColor = settings.dynamicColor) {
-        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        // 全局液体极光背景：所有页面透明叠在其上（场景页除外，插件自绘背景）
+        Box(modifier = Modifier.fillMaxSize()) {
+            AuroraBackground(modifier = Modifier.fillMaxSize().zIndex(0f))
             val stack = remember { mutableStateListOf<Screen>(Screen.MainList) }
             val current = stack.last()
 
@@ -46,44 +49,46 @@ fun AppRoot() {
 
             BackHandler(enabled = stack.size > 1) { stack.removeAt(stack.lastIndex) }
 
-            AnimatedContent(
-                targetState = current,
-                transitionSpec = {
-                    if (targetState != Screen.MainList) {
-                        slideInHorizontally(tween(280)) { it / 3 } togetherWith
-                            slideOutHorizontally(tween(280)) { -it / 4 }
-                    } else {
-                        slideInHorizontally(tween(280)) { -it / 4 } togetherWith
-                            slideOutHorizontally(tween(280)) { it / 3 }
-                    }
-                },
-                label = "nav"
-            ) { screen ->
-                when (screen) {
-                    Screen.MainList -> MainListScreen(
-                        onOpenLibrary = { navigate(Screen.Library(it)) },
-                        onOpenSettings = { navigate(Screen.Settings) },
-                        onOpenAbout = { navigate(Screen.About) }
-                    )
-                    is Screen.Library -> LibraryScreen(
-                        entryId = screen.id,
-                        onBack = { stack.removeAt(stack.lastIndex) },
-                        onOpenScene = { pluginId, sceneId, title ->
-                            navigate(Screen.Scene(pluginId, sceneId, title))
+            Box(modifier = Modifier.fillMaxSize().zIndex(1f)) {
+                AnimatedContent(
+                    targetState = current,
+                    transitionSpec = {
+                        if (targetState != Screen.MainList) {
+                            slideInHorizontally(tween(280)) { it / 3 } togetherWith
+                                slideOutHorizontally(tween(280)) { -it / 4 }
+                        } else {
+                            slideInHorizontally(tween(280)) { -it / 4 } togetherWith
+                                slideOutHorizontally(tween(280)) { it / 3 }
                         }
-                    )
-                    is Screen.Scene -> SceneHostScreen(
-                        pluginId = screen.pluginId,
-                        sceneId = screen.sceneId,
-                        title = screen.title,
-                        onBack = { stack.removeAt(stack.lastIndex) }
-                    )
-                    Screen.Settings -> SettingsScreen(
-                        onBack = { stack.removeAt(stack.lastIndex) }
-                    )
-                    Screen.About -> AboutScreen(
-                        onBack = { stack.removeAt(stack.lastIndex) }
-                    )
+                    },
+                    label = "nav"
+                ) { screen ->
+                    when (screen) {
+                        Screen.MainList -> MainListScreen(
+                            onOpenLibrary = { navigate(Screen.Library(it)) },
+                            onOpenSettings = { navigate(Screen.Settings) },
+                            onOpenAbout = { navigate(Screen.About) }
+                        )
+                        is Screen.Library -> LibraryScreen(
+                            entryId = screen.id,
+                            onBack = { stack.removeAt(stack.lastIndex) },
+                            onOpenScene = { pluginId, sceneId, title ->
+                                navigate(Screen.Scene(pluginId, sceneId, title))
+                            }
+                        )
+                        is Screen.Scene -> SceneHostScreen(
+                            pluginId = screen.pluginId,
+                            sceneId = screen.sceneId,
+                            title = screen.title,
+                            onBack = { stack.removeAt(stack.lastIndex) }
+                        )
+                        Screen.Settings -> SettingsScreen(
+                            onBack = { stack.removeAt(stack.lastIndex) }
+                        )
+                        Screen.About -> AboutScreen(
+                            onBack = { stack.removeAt(stack.lastIndex) }
+                        )
+                    }
                 }
             }
         }
