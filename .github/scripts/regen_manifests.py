@@ -15,6 +15,7 @@ regen_manifests.py —— 发版流水线的四清单再生成器。
 读取（本地产物）：
   dist/*.apk           本版新 APK（含宿主 + 5 插件）
   patches-out/*.vcdiff 本版补丁（App 窗口 + 插件链）
+  release-notes/{tag}.md 自定义版本说明（可选；每行一条要点，# 开头为注释行）
 
 输出（原地覆盖，供 CI 提交回 main）：
   version.json    App 版本清单（全量 APK + 相邻直连补丁）
@@ -168,15 +169,33 @@ def main():
     }
 
     # ── changelog.json ──
+    # 自定义版本说明：优先读 release-notes/{tag}.md（每行一条要点；
+    # `---` 分隔线上方为主更新、下方为次要细节），无则回退默认摘要。
+    notes_file = root / "release-notes" / f"{args.tag}.md"
+    if notes_file.exists():
+        raw = [
+            ln.strip()
+            for ln in notes_file.read_text(encoding="utf-8").splitlines()
+            if ln.strip() and not ln.strip().startswith("#")
+        ]
+        notes = []
+        for ln in raw:
+            # 去掉列表符号；纯分隔线（--- / ··· / ===）跳过
+            item = ln.lstrip("-·•* ").strip()
+            if item and set(item) - set("-=· "):
+                notes.append(item)
+        print(f"✅ 版本说明来自 release-notes/{args.tag}.md（{len(notes)} 条）")
+    else:
+        notes = [
+            f"宿主与五插件对齐 v{args.version}（versionCode {args.code}）",
+            f"App 补丁窗口：{len(final_bases)} 个基底；插件独立补丁链已更新",
+        ]
     changelog.insert(0, {
         "versionCode": args.code,
         "versionName": args.version,
         "tag": args.tag,
         "date": version["publishedAt"][:10],
-        "notes": [
-            f"宿主与五插件对齐 v{args.version}（versionCode {args.code}）",
-            f"App 补丁窗口：{len(final_bases)} 个基底；插件独立补丁链已更新",
-        ],
+        "notes": notes,
     })
 
     for name, data in [

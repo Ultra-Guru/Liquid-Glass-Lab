@@ -98,6 +98,9 @@ object Downloader {
         )
     }
 
+    /** 直连拉取文本（不经任何加速通道）—— 镜像测速专用。 */
+    fun fetchTextDirect(url: String): String = fetchTextOnce(url)
+
     private fun fetchTextOnce(url: String): String {
         client.newCall(Request.Builder().url(url).withUa().build()).execute().use { resp ->
             if (!resp.isSuccessful) throw IOException("HTTP ${resp.code}")

@@ -16,12 +16,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.filled.SystemUpdateAlt
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -55,17 +53,16 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AboutScreen(onBack: () -> Unit) {
+fun AboutScreen(
+    onBack: () -> Unit,
+    onOpenUpdates: () -> Unit = {}
+) {
     val context = LocalContext.current
     val app = GlassLabApp.get()
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
 
     var changelog by remember { mutableStateOf<List<ChangelogEntry>>(emptyList()) }
     var changelogMsg by remember { mutableStateOf<String?>(null) }
-
-    // App 更新执行态（此处执行下载/合成/安装）
-    var updateState by remember { mutableStateOf<UpdateCenter.AppState>(UpdateCenter.AppState.Idle) }
-    var readyApk by remember { mutableStateOf<java.io.File?>(null) }
 
     val settings by app.settings.state.collectAsState()
 
@@ -130,36 +127,14 @@ fun AboutScreen(onBack: () -> Unit) {
                     )
                     Spacer(Modifier.height(14.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Button(
-                            onClick = {
-                                scope.launch {
-                                    updateState = UpdateCenter.AppState.Checking("检查更新…")
-                                    runCatching {
-                                        UpdateCenter.downloadAppUpdate(
-                                            context = context,
-                                            currentVersionCode = versionInfo.second,
-                                            mirrorBase = settings.mirrorBase,
-                                            onState = { updateState = it },
-                                            boost = settings.networkBoost
-                                        )
-                                    }.onSuccess { apk ->
-                                        readyApk = apk
-                                        updateState = UpdateCenter.AppState.ReadyToInstall(
-                                            apk, UpdateCenter.fetchAppManifest(settings.mirrorBase, settings.networkBoost),
-                                            viaPatch = true
-                                        )
-                                        UpdateCenter.launchApkInstaller(context, apk)
-                                    }.onFailure {
-                                        updateState = if (it.message?.contains("already up to date") == true) {
-                                            UpdateCenter.AppState.UpToDate(versionInfo.first)
-                                        } else {
-                                            UpdateCenter.AppState.Failed(it.message ?: "未知错误")
-                                        }
-                                    }
-                                }
-                            },
+                        androidx.compose.material3.Button(
+                            onClick = onOpenUpdates,
                             colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = BrandRed)
-                        ) { Text("检查更新") }
+                        ) {
+                            Icon(Icons.Filled.SystemUpdateAlt, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.size(6.dp))
+                            Text("前往更新中心")
+                        }
                         TextButton(onClick = {
                             runCatching {
                                 context.startActivity(
@@ -169,48 +144,12 @@ fun AboutScreen(onBack: () -> Unit) {
                             }
                         }) { Text("项目仓库 ↗") }
                     }
-                    when (val st = updateState) {
-                        is UpdateCenter.AppState.Downloading -> {
-                            Spacer(Modifier.height(8.dp))
-                            Text("下载中（${st.from}）${st.percent}%", style = MaterialTheme.typography.labelMedium)
-                            LinearProgressIndicator(
-                                progress = { st.percent / 100f },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                        is UpdateCenter.AppState.Patching -> {
-                            Spacer(Modifier.height(8.dp))
-                            Text("vcdiff 合成中 ${st.percent}%", style = MaterialTheme.typography.labelMedium)
-                            LinearProgressIndicator(
-                                progress = { st.percent / 100f },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                        is UpdateCenter.AppState.ReadyToInstall -> {
-                            Spacer(Modifier.height(8.dp))
-                            Text(
-                                "已就绪：${st.file.name}\n已拉起系统安装器（如未弹出请点击重装）",
-                                style = MaterialTheme.typography.labelMedium
-                            )
-                            TextButton(onClick = {
-                                UpdateCenter.launchApkInstaller(context, st.file)
-                            }) { Text("再次拉起安装器") }
-                        }
-                        is UpdateCenter.AppState.UpToDate -> {
-                            Spacer(Modifier.height(8.dp))
-                            Text("已是最新版本 v${st.versionName}", style = MaterialTheme.typography.labelMedium)
-                        }
-                        is UpdateCenter.AppState.Failed -> {
-                            Spacer(Modifier.height(8.dp))
-                            Text(
-                                "更新失败：${st.reason}",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
-                        is UpdateCenter.AppState.Checking -> Text(st.message, style = MaterialTheme.typography.labelMedium)
-                        UpdateCenter.AppState.Idle -> {}
-                    }
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "App 增量升级（vcdiff 补丁优先）与插件安装 / 更新已统一在「更新中心」。",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }

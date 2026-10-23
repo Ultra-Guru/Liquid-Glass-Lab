@@ -70,5 +70,19 @@ class GlassLabApp : Application() {
 
         fun get(): GlassLabApp =
             instance ?: error("GlassLabApp not created yet")
+
+        /** 当前宿主 versionCode（各屏共用）。 */
+        fun hostVersionCode(): Int = runCatching {
+            val ctx = get()
+            @Suppress("DEPRECATION")
+            ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionCode
+        }.getOrDefault(1)
+
+        /** 当前宿主 versionName（各屏共用）。 */
+        fun hostVersionName(): String = runCatching {
+            val ctx = get()
+            @Suppress("DEPRECATION")
+            ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "?"
+        }.getOrDefault("?")
     }
 }

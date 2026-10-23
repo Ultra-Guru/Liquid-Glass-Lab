@@ -1,12 +1,5 @@
 package com.ultraguru.liquidglass.ui.screen
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,11 +8,22 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -33,41 +37,70 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.ultraguru.liquidglass.GlassLabApp
 import com.ultraguru.liquidglass.data.Catalog
+import com.ultraguru.liquidglass.data.MirrorPresets
 import com.ultraguru.liquidglass.data.SettingsStore
 import com.ultraguru.liquidglass.data.ThemeMode
-import com.ultraguru.liquidglass.plugin.InstallState
 import com.ultraguru.liquidglass.plugin.PluginRegistry
-import com.ultraguru.liquidglass.update.UpdateCenter
-import com.ultraguru.liquidglass.update.AppVersionManifest
 import com.ultraguru.liquidglass.ui.components.GlassCard
+import com.ultraguru.liquidglass.ui.components.StatusChip
 import com.ultraguru.liquidglass.ui.theme.BrandRed
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit) {
+fun SettingsScreen(
+    onBack: () -> Unit,
+    onOpenUpdates: () -> Unit = {}
+) {
     val app = GlassLabApp.get()
     val settings by app.settings.state.collectAsState()
     val installed by PluginRegistry.installed.collectAsState()
-    val installStates by PluginRegistry.installStates.collectAsState()
     val diagnostics by PluginRegistry.diagnostics.collectAsState()
-    val context = LocalContext.current
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
 
-    var appUpdate by remember { mutableStateOf<AppVersionManifest?>(null) }
-    var appUpdateBusy by remember { mutableStateOf(false) }
-    var appUpdateMsg by remember { mutableStateOf<String?>(null) }
-    var pluginUpdates by remember { mutableStateOf<Map<String, com.ultraguru.liquidglass.update.PluginRelease>>(emptyMap()) }
-    var mirrorDraft by remember(settings.mirrorBase) { mutableStateOf(settings.mirrorBase) }
     var adoptMsg by remember { mutableStateOf<String?>(null) }
+
+    // 镜像测速状态：预设 id → 延迟结果（null = 未测 / 测试中由 testing 标记）
+    var speedResults by remember { mutableStateOf<Map<String, MirrorPresets.SpeedResult>>(emptyMap()) }
+    var testing by remember { mutableStateOf(false) }
+    var customDraft by remember(settings.mirrorBase) {
+        mutableStateOf(
+            MirrorPresets.match(settings.mirrorBase)?.let { "" } ?: settings.mirrorBase
+        )
+    }
+
+    fun runSpeedTest() {
+        scope.launch {
+            testing = true
+            speedResults = emptyMap()
+            val results = MirrorPresets.presets.map { preset ->
+                async { MirrorPresets.speedTest(preset) }
+            }.awaitAll()
+            speedResults = results.associateBy { it.preset.id }
+            testing = false
+        }
+    }
+
+    fun applyMirror(base: String) {
+        app.settings.update { it.copy(mirrorBase = base.trim().ifBlank { SettingsStore.DEFAULT_MIRROR }) }
+    }
+
+    fun applyFastest() {
+        val best = speedResults.values
+            .filter { it.latencyMs != null }
+            .minByOrNull { it.latencyMs!! } ?: return
+        applyMirror(best.preset.base)
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -117,7 +150,7 @@ fun SettingsScreen(onBack: () -> Unit) {
             Section("更新") {
                 SettingSwitch(
                     title = "启动时静默检查更新",
-                    subtitle = "仅在发现新版本时于列表页提示",
+                    subtitle = "仅在发现新版本 / 插件可更新时于列表页横幅提示",
                     checked = settings.silentUpdateCheck,
                     onChange = { v -> app.settings.update { it.copy(silentUpdateCheck = v) } }
                 )
@@ -128,120 +161,128 @@ fun SettingsScreen(onBack: () -> Unit) {
                     onChange = { v -> app.settings.update { it.copy(networkBoost = v) } }
                 )
                 Spacer(Modifier.height(8.dp))
-                Row(
+                Button(
+                    onClick = onOpenUpdates,
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    colors = ButtonDefaults.buttonColors(containerColor = BrandRed)
                 ) {
-                    Button(
-                        onClick = {
-                            scope.launch {
-                                appUpdateBusy = true
-                                appUpdateMsg = null
-                                runCatching {
-                                    UpdateCenter.peekAppUpdate(hostVersionCode(), settings.mirrorBase, settings.networkBoost)
-                                }.onSuccess { m ->
-                                    appUpdate = m
-                                    appUpdateMsg = if (m == null) "已是最新版本" else "发现新版本 v${m.versionName}"
-                                }.onFailure {
-                                    appUpdateMsg = "检查失败：${it.message}"
-                                }
-                                appUpdateBusy = false
-                            }
-                        },
-                        enabled = !appUpdateBusy
-                    ) {
-                        if (appUpdateBusy) {
-                            CircularProgressIndicator(modifier = Modifier.height(16.dp), strokeWidth = 2.dp)
-                        } else Text("检查 App 更新")
-                    }
-                    OutlinedButton(
-                        onClick = {
-                            scope.launch {
-                                runCatching { UpdateCenter.findPluginUpdates(settings.mirrorBase, settings.networkBoost) }
-                                    .onSuccess { pluginUpdates = it }
-                            }
-                        }
-                    ) { Text("检查插件更新") }
+                    Text("打开更新中心（App 增量升级 · 插件一键更新）")
                 }
-                if (appUpdateMsg != null) {
-                    Spacer(Modifier.height(6.dp))
-                    Text(appUpdateMsg!!, style = MaterialTheme.typography.bodySmall)
-                }
-                if (appUpdate != null) {
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        "远端 v${appUpdate!!.versionName}（code ${appUpdate!!.versionCode}）可用 —— 前往「关于 → 检查更新」执行增量下载",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = BrandRed
-                    )
-                }
-                if (pluginUpdates.isNotEmpty()) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "可更新插件：${pluginUpdates.keys.joinToString("、")}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = BrandRed
-                    )
-                    pluginUpdates.forEach { (id, rel) ->
-                        ListItem(
-                            headlineContent = { Text(Catalog.byId(id)?.title ?: id) },
-                            supportingContent = { Text("本机 → v${rel.versionName}") },
-                            trailingContent = {
-                                val st = installStates[id]
-                                OutlinedButton(onClick = {
-                                    scope.launch {
-                                        UpdateCenter.updatePlugin(
-                                            context = context,
-                                            pluginId = id,
-                                            mirrorBase = settings.mirrorBase,
-                                            hostVersionCode = hostVersionCode(),
-                                            onProgress = { PluginRegistry.setInstallState(id, it) },
-                                            boost = settings.networkBoost
-                                        )
-                                    }
-                                }, enabled = st !is InstallState.Downloading && st !is InstallState.Installing) {
-                                    when (st) {
-                                        is InstallState.Downloading -> Text("${st.percent}%")
-                                        is InstallState.Installing -> Text("${st.percent}%")
-                                        else -> Text("更新")
-                                    }
-                                }
-                            }
-                        )
-                    }
-                }
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "App 更新优先走 vcdiff 增量补丁（下载量约为全量 1/6）；插件安装/更新不经系统安装器，装完即生效。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 
         // ── 镜像源 ──
         item {
             Section("镜像源") {
-                OutlinedTextField(
-                    value = mirrorDraft,
-                    onValueChange = { mirrorDraft = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("清单基地址（version.json / plugins.json / patches.json）") },
-                    supportingText = { Text("留空恢复官方源。资产 URL 会按此基地址解析相对路径。") },
-                    singleLine = true
-                )
+                val currentPreset = MirrorPresets.match(settings.mirrorBase)
+                // 预设单选列表（含测速结果展示）
+                MirrorPresets.presets.forEach { preset ->
+                    val result = speedResults[preset.id]
+                    val selected = currentPreset?.id == preset.id
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = selected,
+                            onClick = { applyMirror(preset.base) }
+                        )
+                        Column(Modifier.weight(1f)) {
+                            Text(preset.label, style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                preset.note,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        when {
+                            testing && result == null -> {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                            }
+                            result != null && result.latencyMs != null -> {
+                                StatusChip(
+                                    "${result.latencyMs}ms" + (result.versionName?.let { " · v$it" } ?: ""),
+                                    accent = true
+                                )
+                            }
+                            result != null -> {
+                                Text(
+                                    "超时",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                    }
+                }
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedButton(onClick = { runSpeedTest() }, enabled = !testing) {
+                        if (testing) {
+                            CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                            Spacer(Modifier.size(6.dp))
+                        } else {
+                            Icon(Icons.Filled.Speed, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.size(6.dp))
+                        }
+                        Text("测速")
+                    }
+                    OutlinedButton(
+                        onClick = { applyFastest() },
+                        enabled = !testing && speedResults.values.any { it.latencyMs != null }
+                    ) { Text("用最快") }
+                }
+                Spacer(Modifier.height(10.dp))
+                // 自定义镜像输入（全镜像：清单与资产同源）
+                Text(
+                    "自定义镜像（全镜像，清单与资产同源）",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.height(6.dp))
+                OutlinedTextField(
+                    value = customDraft,
+                    onValueChange = { customDraft = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("清单基地址（指向仓库根，以 / 结尾）") },
+                    supportingText = {
+                        Text("例：https://your-proxy.example.com/Ultra-Guru/Liquid-Glass-Lab/（留空恢复官方源）")
+                    },
+                    singleLine = true
+                )
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedButton(onClick = {
-                        app.settings.update { it.copy(mirrorBase = mirrorDraft.trim().ifBlank { SettingsStore.DEFAULT_MIRROR }) }
-                    }) { Text("保存") }
+                        applyMirror(customDraft)
+                    }) { Text("保存自定义") }
                     OutlinedButton(onClick = {
-                        mirrorDraft = SettingsStore.DEFAULT_MIRROR
-                        app.settings.update { it.copy(mirrorBase = SettingsStore.DEFAULT_MIRROR) }
+                        customDraft = ""
+                        applyMirror(SettingsStore.DEFAULT_MIRROR)
                     }) { Text("恢复官方源") }
                 }
                 if (settings.isCustomMirror()) {
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "当前：自定义镜像（${settings.mirrorBase.take(48)}…）",
+                        "当前生效：${settings.mirrorBase}",
                         style = MaterialTheme.typography.labelSmall,
                         color = BrandRed
                     )
                 }
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "预设镜像只镜像清单（json）；APK / 补丁资产仍由 GitHub Release 端点提供（叠加网络加速）。",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 16.sp
+                )
             }
         }
 
@@ -267,6 +308,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                             scope.launch { adoptMsg = if (n > 0) "已导入 $n 个系统已装插件" else "未发现新的系统已装插件" }
                         }
                     }) { Text("导入系统已装插件") }
+                    OutlinedButton(onClick = onOpenUpdates) { Text("去更新中心安装/更新") }
                 }
                 if (adoptMsg != null) {
                     Spacer(Modifier.height(6.dp))
@@ -358,10 +400,3 @@ private fun SettingSwitch(title: String, subtitle: String, checked: Boolean, onC
         Switch(checked = checked, onCheckedChange = onChange)
     }
 }
-
-private fun hostVersionCode(): Int =
-    runCatching {
-        val ctx = GlassLabApp.get()
-        @Suppress("DEPRECATION")
-        ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionCode
-    }.getOrDefault(1)

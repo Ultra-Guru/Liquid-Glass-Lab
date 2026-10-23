@@ -18,8 +18,10 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -27,7 +29,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -39,6 +43,8 @@ import com.ultraguru.liquidglass.GlassLabApp
 import com.ultraguru.liquidglass.data.Catalog
 import com.ultraguru.liquidglass.plugin.InstallState
 import com.ultraguru.liquidglass.plugin.PluginRegistry
+import com.ultraguru.liquidglass.update.UpdateCenter
+import com.ultraguru.liquidglass.update.UpdateOverview
 import com.ultraguru.liquidglass.ui.components.GlassCard
 import com.ultraguru.liquidglass.ui.components.NavRow
 import com.ultraguru.liquidglass.ui.components.StarsBadge
@@ -51,25 +57,53 @@ import kotlinx.coroutines.withContext
 /**
  * 主界面（用户指定结构）：
  * ① 五大液态玻璃库列表（kyant0 第一）
- * ② 倒数第二「关于」
- * ③ 最后「设置」
+ * ② 倒数第三「更新中心」（v0.1.3 新增）
+ * ③ 倒数第二「关于」
+ * ④ 最后「设置」
  *
  * v2 精致化：磨砂玻璃卡片 + 液体极光背景（AppRoot 层），透明叠加。
+ * v3：启动静默检查（设置可关），发现新版本 / 插件可更新时顶部横幅直达更新中心。
  */
 @Composable
 fun MainListScreen(
     onOpenLibrary: (String) -> Unit,
     onOpenSettings: () -> Unit,
-    onOpenAbout: () -> Unit
+    onOpenAbout: () -> Unit,
+    onOpenUpdates: () -> Unit
 ) {
     val installed by PluginRegistry.installed.collectAsState()
     val installStates by PluginRegistry.installStates.collectAsState()
+    val settings by GlassLabApp.get().settings.state.collectAsState()
     val context = LocalContext.current
     val versionName = remember {
         runCatching {
             @Suppress("DEPRECATION")
             context.packageManager.getPackageInfo(context.packageName, 0).versionName
         }.getOrNull() ?: "?"
+    }
+
+    // 启动静默检查（设置开启时）：发现 App 新版本 / 插件可安装更新 → 顶部横幅
+    var banner by remember { mutableStateOf<UpdateOverview?>(null) }
+    LaunchedEffect(settings.silentUpdateCheck, settings.mirrorBase) {
+        if (!settings.silentUpdateCheck) {
+            banner = null
+            return@LaunchedEffect
+        }
+        withContext(Dispatchers.IO) {
+            runCatching {
+                UpdateCenter.fetchOverview(
+                    GlassLabApp.hostVersionCode(),
+                    settings.mirrorBase,
+                    settings.networkBoost
+                )
+            }.onSuccess { ov ->
+                if (ov.appUpdateAvailable || ov.pluginUpdatesAgainst(PluginRegistry.installed.value).isNotEmpty()) {
+                    banner = ov
+                } else {
+                    banner = null
+                }
+            }
+        }
     }
 
     // 进入主列表即尝试导入系统已装插件（用户从 Release 手动装的插件 APK）
@@ -116,6 +150,62 @@ fun MainListScreen(
             }
         }
 
+        // 新版本横幅（静默检查命中时显示；点击直达更新中心）
+        if (banner != null) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                val appNew = banner!!.appUpdateAvailable
+                val pluginCount = banner!!.pluginUpdatesAgainst(
+                    PluginRegistry.installed.value
+                ).size
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    cornerRadius = 20.dp,
+                    elevation = 12.dp,
+                    onClick = onOpenUpdates
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .background(
+                                    Brush.linearGradient(listOf(BrandRedDeep, BrandRed)),
+                                    CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Filled.CloudDownload,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Column(Modifier.padding(start = 12.dp).weight(1f)) {
+                            Text(
+                                if (appNew) "发现新版本 v${banner!!.remoteApp.versionName}" else "插件可安装 / 更新",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                buildString {
+                                    if (appNew) append("App 可增量升级（code ${banner!!.remoteApp.versionCode}）")
+                                    if (pluginCount > 0) {
+                                        if (isNotEmpty()) append(" · ")
+                                        append("$pluginCount 个插件待处理")
+                                    }
+                                } + " —— 点击进入更新中心",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         // 五大库
         items(Catalog.libraries, key = { it.id }) { entry ->
             LibraryCard(
@@ -130,9 +220,19 @@ fun MainListScreen(
             )
         }
 
-        // 倒数第二：关于
+        // 倒数第三：更新中心
         item(span = { GridItemSpan(maxLineSpan) }) {
             Spacer(Modifier.height(8.dp))
+            NavRow(
+                icon = Icons.Outlined.SystemUpdate,
+                title = "更新中心",
+                subtitle = "App 增量升级 · 插件安装与更新 · 一键全部更新",
+                onClick = onOpenUpdates
+            )
+        }
+
+        // 倒数第二：关于
+        item(span = { GridItemSpan(maxLineSpan) }) {
             NavRow(
                 icon = Icons.Outlined.Info,
                 title = "关于",
@@ -146,7 +246,7 @@ fun MainListScreen(
             NavRow(
                 icon = Icons.Outlined.Settings,
                 title = "设置",
-                subtitle = "主题 · 检查更新 · 插件管理 · 镜像源 · 诊断",
+                subtitle = "主题 · 镜像源与测速 · 网络加速 · 插件管理 · 诊断",
                 onClick = onOpenSettings
             )
         }

@@ -8,6 +8,7 @@ import com.ultraguru.liquidglass.net.Downloader
 import com.ultraguru.liquidglass.plugin.InstallState
 import com.ultraguru.liquidglass.plugin.PluginRegistry
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -24,6 +25,34 @@ import java.io.File
  * 每插件在 plugins.json 有独立 versionCode + 补丁链：下载（全量或补丁合成）
  * → sha256 → 落位安装（DexClassLoader 重载）→ 即时生效，全程不经系统安装器。
  */
+/** App 升级包准备结果（含远端清单与路径信息，UI 免二次拉取）。 */
+data class PreparedUpdate(
+    val file: File,
+    val manifest: AppVersionManifest,
+    /** true = 走了 vcdiff 增量；false = 全量 APK。 */
+    val viaPatch: Boolean,
+    /** 增量路径描述（诊断展示）：如「增量补丁 v5→v0.1.3」或「全量 APK」。 */
+    val routeNote: String
+)
+
+/** 一次检查的总览（更新中心首屏 / 主列表横幅）。 */
+data class UpdateOverview(
+    /** 远端 App 清单（无论是否有新版都返回，供展示最新版本号）。 */
+    val remoteApp: AppVersionManifest,
+    /** 远端 versionCode 高于本机时为 true。 */
+    val appUpdateAvailable: Boolean,
+    /** 全部插件的远端发行（按需与本机安装表实时比对）。 */
+    val remotePlugins: List<PluginRelease>,
+    /** 检查时刻使用的清单源（诊断）。 */
+    val mirrorBase: String
+) {
+    /** 与给定本机安装表比对，得出需安装（未装）或需更新的插件。 */
+    fun pluginUpdatesAgainst(installed: Map<String, com.ultraguru.liquidglass.plugin.InstalledPluginInfo>): Map<String, PluginRelease> =
+        remotePlugins
+            .filter { rel -> installed[rel.id] == null || rel.versionCode > installed[rel.id]!!.versionCode }
+            .associateBy { it.id }
+}
+
 object UpdateCenter {
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -65,6 +94,27 @@ object UpdateCenter {
             }.getOrDefault(emptyList())
         }
 
+    /**
+     * 一次性拉取 App + 插件远端状态（两清单并发）：更新中心首屏与主列表横幅共用。
+     * 任一清单失败则整体抛异常（调用方自行降级为「检查失败」提示）。
+     */
+    suspend fun fetchOverview(
+        currentVersionCode: Int,
+        mirrorBase: String,
+        boost: Boolean = true
+    ): UpdateOverview = withContext(Dispatchers.IO) {
+        val appDeferred = async { fetchAppManifest(mirrorBase, boost) }
+        val pluginsDeferred = async { fetchPluginsManifest(mirrorBase, boost) }
+        val app = appDeferred.await()
+        val plugins = pluginsDeferred.await()
+        UpdateOverview(
+            remoteApp = app,
+            appUpdateAvailable = app.versionCode > currentVersionCode,
+            remotePlugins = plugins.plugins,
+            mirrorBase = mirrorBase
+        )
+    }
+
     // ── App 更新链 ───────────────────────────────────────────────────
 
     /**
@@ -81,8 +131,8 @@ object UpdateCenter {
     }
 
     /**
-     * 下载 App 升级包（补丁优先，自动合成），返回可安装 APK 文件。
-     * [onState] 汇报进度；抛出异常 = 失败。
+     * 下载 App 升级包（补丁优先，自动合成），返回可安装 APK 与完整清单。
+     * [onState] 汇报进度；抛出异常 = 失败（"already up to date" = 已是最新）。
      */
     suspend fun downloadAppUpdate(
         context: Context,
@@ -90,7 +140,7 @@ object UpdateCenter {
         mirrorBase: String,
         onState: (AppState) -> Unit,
         boost: Boolean = true
-    ): File = withContext(Dispatchers.IO) {
+    ): PreparedUpdate = withContext(Dispatchers.IO) {
         val manifest = fetchAppManifest(mirrorBase, boost)
         if (manifest.versionCode <= currentVersionCode) {
             onState(AppState.UpToDate(manifest.versionName))
@@ -111,8 +161,13 @@ object UpdateCenter {
             }, boost = boost)
             onState(AppState.Patching(0))
             applyVcdiff(currentApk, patchFile, target, directPatch) { p -> onState(AppState.Patching(p)) }
+            val patchMb = "%.1f".format(patchFile.length() / 1048576.0)
             patchFile.delete()
-            return@withContext target
+            return@withContext PreparedUpdate(
+                target, manifest, viaPatch = true,
+                routeNote = "增量补丁 v${currentVersionCode} → v${manifest.versionName}" +
+                    "（${patchMb}MB 补丁合成 ${"%.1f".format(target.length() / 1048576.0)}MB）"
+            )
         }
 
         // 2) 窗口补丁（patches.json 多基底）
@@ -128,7 +183,11 @@ object UpdateCenter {
             onState(AppState.Patching(0))
             applyVcdiff(currentApk, patchFile, target, window) { p -> onState(AppState.Patching(p)) }
             patchFile.delete()
-            return@withContext target
+            return@withContext PreparedUpdate(
+                target, manifest, viaPatch = true,
+                routeNote = "窗口补丁 v${currentVersionCode} → v${manifest.versionName}" +
+                    "（${"%.1f".format((target.length() / 1048576.0))}MB 合成完成）"
+            )
         }
 
         // 3) 全量
@@ -142,7 +201,10 @@ object UpdateCenter {
             target.delete()
             throw IllegalStateException("全量 APK sha256 校验失败")
         }
-        target
+        PreparedUpdate(
+            target, manifest, viaPatch = false,
+            routeNote = "全量 APK ${"%.1f".format((target.length() / 1048576.0))}MB（本机无可用补丁路径）"
+        )
     }
 
     /** 拉起系统安装器（App 覆盖安装）。 */
@@ -236,8 +298,9 @@ object UpdateCenter {
 
     // ── VCDIFF 应用 ───────────────────────────────────────────────────
 
-    /** 从资产命名解析补丁基底版本（patch_..._v{N}_to_... 或 file 命名 from_{N}）。 */
+    /** 补丁基底版本：清单显式 fromVersionCode 优先，否则从资产命名解析。 */
     fun patchFrom(asset: AssetRef): Int? {
+        asset.fromVersionCode?.let { return it }
         val candidates = listOfNotNull(asset.url, asset.path)
         for (c in candidates) {
             Regex("""_v?(\d+)_to_""").find(c)?.let { return it.groupValues[1].toIntOrNull() }

@@ -16,15 +16,15 @@ import kotlinx.serialization.Serializable
  *
  * 由 release.yml 在发版时生成并提交回 main；App「设置 → 检查更新」读取。
  *
- * ## 镜像语义（v2：修复 Release 资产 404）
+ * ## 镜像语义（v3：预设镜像 + 测速）
  * [AssetRef.url] 是 GitHub 规范绝对地址；[AssetRef.path] 是相对仓库的路径。
  *
- * 关键区分：**清单**（json）住在 raw.githubusercontent（git 内容），
+ * 关键区分：**清单**（json）住在 raw.githubusercontent / jsDelivr CDN（git 内容），
  * 而**资产**（APK / vcdiff）只住在 github.com 的 Release 下载端点 ——
- * raw 源不镜像 Release 资产，直接拼接必然 404（v0.1.0 安装失败的根因）。
+ * 这些 git 内容镜像不托管 Release 资产，直接拼接必然 404（v0.1.0 安装失败的根因）。
  *
- * 因此：默认（官方 raw 源）时资产回落到 [SettingsStore.GITHUB_BASE]；
- * 自定义镜像时视为「全镜像」（清单+资产同源）按镜像基地址拼接。
+ * 因此：官方源 / jsDelivr 系 CDN 预设时资产回落到 [SettingsStore.GITHUB_BASE]
+ * （仍可叠加加速通道代理）；自定义镜像视为「全镜像」（清单+资产同源）按基地址拼接。
  */
 
 @Serializable
@@ -32,12 +32,15 @@ data class AssetRef(
     val url: String,
     val path: String? = null,
     val sizeBytes: Long = 0,
-    val sha256: String
+    val sha256: String,
+    /** 显式基底版本（清单直接声明时优先于文件名解析）。 */
+    val fromVersionCode: Int? = null
 ) {
     /**
      * 依镜像设置解析实际下载地址。
      *
      * 官方 raw 清单源 → 资产回落 github.com 规范端点（raw 不托管 Release 资产）；
+     * jsDelivr 系 CDN 同样只镜像 git 内容（清单）不镜像 Release 资产 → 同样回落；
      * 自定义镜像 → 全镜像按基地址拼接；无 path → 用规范绝对 url。
      */
     fun resolve(mirrorBase: String): String {
@@ -52,13 +55,17 @@ data class AssetRef(
         fun assetBaseFor(mirrorBase: String): String {
             val m = mirrorBase.trim().trimEnd('/')
             if (m.isEmpty()) return ""
-            return if (m == SettingsStore.DEFAULT_MIRROR.trimEnd('/')) {
+            if (m == SettingsStore.DEFAULT_MIRROR.trimEnd('/')) {
                 // 官方 raw 清单源：资产一律走 github.com 规范 Release 端点
-                SettingsStore.GITHUB_BASE.trimEnd('/')
-            } else {
-                // 自定义镜像：约定为全镜像（清单与资产同源）
-                m
+                return SettingsStore.GITHUB_BASE.trimEnd('/')
             }
+            // jsDelivr 系只镜像 git 内容（清单），不托管 Release 资产 → 资产回落官方端点
+            if (m.startsWith("https://cdn.jsdelivr.net/") ||
+                m.startsWith("https://fastly.jsdelivr.net/") ||
+                m.startsWith("https://gcore.jsdelivr.net/")
+            ) return SettingsStore.GITHUB_BASE.trimEnd('/')
+            // 自定义镜像：约定为全镜像（清单与资产同源）
+            return m
         }
     }
 }

@@ -22,6 +22,7 @@ import com.ultraguru.liquidglass.ui.screen.LibraryScreen
 import com.ultraguru.liquidglass.ui.screen.MainListScreen
 import com.ultraguru.liquidglass.ui.screen.SceneHostScreen
 import com.ultraguru.liquidglass.ui.screen.SettingsScreen
+import com.ultraguru.liquidglass.ui.screen.UpdateHubScreen
 import com.ultraguru.liquidglass.ui.theme.GlassLabTheme
 
 /** 手工导航栈（无 navigation-compose 依赖，路径完全可控）。 */
@@ -29,6 +30,7 @@ sealed interface Screen {
     data object MainList : Screen
     data class Library(val id: String) : Screen
     data class Scene(val pluginId: String, val sceneId: String, val title: String) : Screen
+    data object Updates : Screen
     data object Settings : Screen
     data object About : Screen
 }
@@ -67,7 +69,8 @@ fun AppRoot() {
                         Screen.MainList -> MainListScreen(
                             onOpenLibrary = { navigate(Screen.Library(it)) },
                             onOpenSettings = { navigate(Screen.Settings) },
-                            onOpenAbout = { navigate(Screen.About) }
+                            onOpenAbout = { navigate(Screen.About) },
+                            onOpenUpdates = { navigate(Screen.Updates) }
                         )
                         is Screen.Library -> LibraryScreen(
                             entryId = screen.id,
@@ -82,11 +85,17 @@ fun AppRoot() {
                             title = screen.title,
                             onBack = { stack.removeAt(stack.lastIndex) }
                         )
+                        Screen.Updates -> UpdateHubScreen(
+                            onBack = { stack.removeAt(stack.lastIndex) },
+                            onOpenSettings = { navigate(Screen.Settings) }
+                        )
                         Screen.Settings -> SettingsScreen(
-                            onBack = { stack.removeAt(stack.lastIndex) }
+                            onBack = { stack.removeAt(stack.lastIndex) },
+                            onOpenUpdates = { navigate(Screen.Updates) }
                         )
                         Screen.About -> AboutScreen(
-                            onBack = { stack.removeAt(stack.lastIndex) }
+                            onBack = { stack.removeAt(stack.lastIndex) },
+                            onOpenUpdates = { navigate(Screen.Updates) }
                         )
                     }
                 }
